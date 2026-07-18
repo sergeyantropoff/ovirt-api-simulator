@@ -1,0 +1,95 @@
+{
+  "series": "3.0",
+  "major": 30,
+  "api_version": "3",
+  "product": {
+    "major": "3",
+    "minor": "0",
+    "full": "3.0.0"
+  },
+  "operation_count": 468,
+  "service_count": 1,
+  "services": [
+    "engine"
+  ],
+  "checksum": "56ca5b81e3ede7c52c77f4e478bf2f0b6cc86d8a3a49f546e5a5352b23b02c70",
+  "generated_at": "2026-07-16T04:31:47Z",
+  "entry_point_links": [
+    {
+      "rel": "bookmarks",
+      "href": "/ovirt-engine/api/bookmarks"
+    },
+    {
+      "rel": "clusters",
+      "href": "/ovirt-engine/api/clusters"
+    },
+    {
+      "rel": "datacenters",
+      "href": "/ovirt-engine/api/datacenters"
+    },
+    {
+      "rel": "disks",
+      "href": "/ovirt-engine/api/disks"
+    },
+    {
+      "rel": "domains",
+      "href": "/ovirt-engine/api/domains"
+    },
+    {
+      "rel": "events",
+      "href": "/ovirt-engine/api/events"
+    },
+    {
+      "rel": "groups",
+      "href": "/ovirt-engine/api/groups"
+    },
+    {
+      "rel": "hosts",
+      "href": "/ovirt-engine/api/hosts"
+    },
+    {
+      "rel": "networks",
+      "href": "/ovirt-engine/api/networks"
+    },
+    {
+      "rel": "permissions",
+      "href": "/ovirt-engine/api/permissions"
+    },
+    {
+      "rel": "roles",
+      "href": "/ovirt-engine/api/roles"
+    },
+    {
+      "rel": "storageconnections",
+      "href": "/ovirt-engine/api/storageconnections"
+    },
+    {
+      "rel": "storagedomains",
+      "href": "/ovirt-engine/api/storagedomains"
+    },
+    {
+      "rel": "tags",
+      "href": "/ovirt-engine/api/tags"
+    },
+    {
+      "rel": "templates",
+      "href": "/ovirt-engine/api/templates"
+    },
+    {
+      "rel": "users",
+      "href": "/ovirt-engine/api/users"
+    },
+    {
+      "rel": "vmpools",
+      "href": "/ovirt-engine/api/vmpools"
+    },
+    {
+      "rel": "vms",
+      "href": "/ovirt-engine/api/vms"
+    }
+  ],
+  "deltas": {
+    "added": 468,
+    "removed": 0
+  }
+}

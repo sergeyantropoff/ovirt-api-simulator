@@ -1,0 +1,119 @@
+{
+  "series": "3.3",
+  "major": 33,
+  "api_version": "3",
+  "product": {
+    "major": "3",
+    "minor": "3",
+    "full": "3.3.0"
+  },
+  "operation_count": 576,
+  "service_count": 1,
+  "services": [
+    "engine"
+  ],
+  "checksum": "0dc63cde6bb0750d79a3b3b74ba7d4b14ed2918cab83cadd53cbfe8b3dff0334",
+  "generated_at": "2026-07-16T04:31:47Z",
+  "entry_point_links": [
+    {
+      "rel": "bookmarks",
+      "href": "/ovirt-engine/api/bookmarks"
+    },
+    {
+      "rel": "clusters",
+      "href": "/ovirt-engine/api/clusters"
+    },
+    {
+      "rel": "datacenters",
+      "href": "/ovirt-engine/api/datacenters"
+    },
+    {
+      "rel": "disks",
+      "href": "/ovirt-engine/api/disks"
+    },
+    {
+      "rel": "domains",
+      "href": "/ovirt-engine/api/domains"
+    },
+    {
+      "rel": "events",
+      "href": "/ovirt-engine/api/events"
+    },
+    {
+      "rel": "groups",
+      "href": "/ovirt-engine/api/groups"
+    },
+    {
+      "rel": "hosts",
+      "href": "/ovirt-engine/api/hosts"
+    },
+    {
+      "rel": "jobs",
+      "href": "/ovirt-engine/api/jobs"
+    },
+    {
+      "rel": "networks",
+      "href": "/ovirt-engine/api/networks"
+    },
+    {
+      "rel": "openstackimageproviders",
+      "href": "/ovirt-engine/api/openstackimageproviders"
+    },
+    {
+      "rel": "openstacknetworkproviders",
+      "href": "/ovirt-engine/api/openstacknetworkproviders"
+    },
+    {
+      "rel": "permissions",
+      "href": "/ovirt-engine/api/permissions"
+    },
+    {
+      "rel": "roles",
+      "href": "/ovirt-engine/api/roles"
+    },
+    {
+      "rel": "schedulingpolicies",
+      "href": "/ovirt-engine/api/schedulingpolicies"
+    },
+    {
+      "rel": "schedulingpolicyunits",
+      "href": "/ovirt-engine/api/schedulingpolicyunits"
+    },
+    {
+      "rel": "storageconnections",
+      "href": "/ovirt-engine/api/storageconnections"
+    },
+    {
+      "rel": "storagedomains",
+      "href": "/ovirt-engine/api/storagedomains"
+    },
+    {
+      "rel": "tags",
+      "href": "/ovirt-engine/api/tags"
+    },
+    {
+      "rel": "templates",
+      "href": "/ovirt-engine/api/templates"
+    },
+    {
+      "rel": "users",
+      "href": "/ovirt-engine/api/users"
+    },
+    {
+      "rel": "vmpools",
+      "href": "/ovirt-engine/api/vmpools"
+    },
+    {
+      "rel": "vms",
+      "href": "/ovirt-engine/api/vms"
+    },
+    {
+      "rel": "vnicprofiles",
+      "href": "/ovirt-engine/api/vnicprofiles"
+    }
+  ],
+  "deltas": {
+    "added": 70,
+    "removed": 0
+  }
+}

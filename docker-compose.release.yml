@@ -1,0 +1,116 @@
+# Quick start with the published Docker Hub runtime image.
+#
+#   docker compose -f docker-compose.release.yml up -d
+#   docker compose -f docker-compose.release.yml run --rm --entrypoint python \
+#     simulator -m app.ovirt.seed_cli --profile minimal
+#
+# Override the image tag:
+#   IMAGE_TAG=0.1.0 docker compose -f docker-compose.release.yml up -d
+#
+# Change TICKET_SIGNING_KEY before exposing the stack beyond a local lab.
+
+name: ovirt-api-simulator-release
+
+x-app-image: &app-image
+  image: ${DOCKER_IMAGE:-inecs/ovirt-api-simulator}:${IMAGE_TAG:-0.1.0}
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql://ovirt:ovirt@postgres:5432/ovirt_simulator
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  TICKET_SIGNING_KEY: ${TICKET_SIGNING_KEY:-development-only-signing-key-change-me}
+  OVIRT_SERIES: ${OVIRT_SERIES:-4.5}
+
+networks:
+  simulator:
+    driver: bridge
+
+volumes:
+  postgres-data:
+
+services:
+  postgres:
+    image: postgres:17.5-bookworm
+    restart: unless-stopped
+    networks: [simulator]
+    environment:
+      POSTGRES_DB: ovirt_simulator
+      POSTGRES_USER: ovirt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ovirt}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ovirt -d ovirt_simulator"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  migrate:
+    <<: *app-image
+    networks: [simulator]
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://ovirt:${POSTGRES_PASSWORD:-ovirt}@postgres:5432/ovirt_simulator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["python"]
+    command: ["-m", "app.db.migrate_cli"]
+    restart: "no"
+
+  simulator:
+    <<: *app-image
+    restart: unless-stopped
+    networks: [simulator]
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://ovirt:${POSTGRES_PASSWORD:-ovirt}@postgres:5432/ovirt_simulator
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 8
+      start_period: 20s
+    expose:
+      - "8080"
+
+  api-gateway:
+    image: nginx:1.28.0-alpine
+    restart: unless-stopped
+    networks: [simulator]
+    depends_on:
+      simulator:
+        condition: service_healthy
+    ports:
+      - "${OVIRT_ENGINE_PORT:-443}:443"
+      - "${OVIRT_UI_PORT:-5000}:5000"
+    volumes:
+      - ./docker/gateway/ovirt-engine.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/tls/server.crt:/etc/nginx/tls/server.crt:ro
+      - ./docker/tls/server.key:/etc/nginx/tls/server.key:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:5000/health/live || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

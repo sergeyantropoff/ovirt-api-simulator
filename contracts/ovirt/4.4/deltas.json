@@ -1,0 +1,23 @@
+{
+  "series": "4.4",
+  "previous": "4.3",
+  "added_count": 14,
+  "removed_count": 0,
+  "added": [
+    "DELETE /ovirt-engine/api/options/{id}",
+    "DELETE /ovirt-engine/api/v4/options/{id}",
+    "GET /ovirt-engine/api/options",
+    "GET /ovirt-engine/api/options/{id}",
+    "GET /ovirt-engine/api/v4/options",
+    "GET /ovirt-engine/api/v4/options/{id}",
+    "POST /ovirt-engine/api/disks/{id}/reduce",
+    "POST /ovirt-engine/api/options",
+    "POST /ovirt-engine/api/storagedomains/{id}/reduceluns",
+    "POST /ovirt-engine/api/v4/disks/{id}/reduce",
+    "POST /ovirt-engine/api/v4/options",
+    "POST /ovirt-engine/api/v4/storagedomains/{id}/reduceluns",
+    "PUT /ovirt-engine/api/options/{id}",
+    "PUT /ovirt-engine/api/v4/options/{id}"
+  ],
+  "removed": []
+}

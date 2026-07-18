@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ovirt-api-simulator.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "ovirt-api-simulator.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "ovirt-api-simulator.name" . }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      initContainers:
+        {{- if .Values.migrate.enabled }}
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python", "-m", "app.db.migrate_cli"]
+          envFrom:
+            - secretRef:
+                name: {{ include "ovirt-api-simulator.fullname" . }}-secret
+        {{- end }}
+      containers:
+        - name: simulator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: OVIRT_SERIES
+              value: {{ .Values.config.ovirtSeries | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ovirt-api-simulator.fullname" . }}-secret
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true

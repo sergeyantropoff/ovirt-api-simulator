@@ -1,0 +1,28 @@
+{
+  "total": 9150,
+  "passed": 9150,
+  "failed": 0,
+  "skipped": 0,
+  "methods": {
+    "DELETE": 1146,
+    "GET": 2314,
+    "HEAD": 2314,
+    "POST": 2230,
+    "PUT": 1146
+  },
+  "series": [
+    "3.0",
+    "3.1",
+    "3.2",
+    "3.3",
+    "3.4",
+    "3.5",
+    "3.6",
+    "4.3",
+    "4.4",
+    "4.5",
+    "master"
+  ],
+  "report_json": "/workspace/reports/pulumi-contract-coverage.json",
+  "report_html": "/workspace/reports/pulumi-contract-coverage.html"
+}

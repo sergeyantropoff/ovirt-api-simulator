@@ -1,0 +1,31 @@
+{
+  "series": "3.4",
+  "previous": "3.3",
+  "added_count": 22,
+  "removed_count": 0,
+  "added": [
+    "DELETE /ovirt-engine/api/externalhostproviders/{id}",
+    "DELETE /ovirt-engine/api/openstackvolumeproviders/{id}",
+    "DELETE /ovirt-engine/api/v3/externalhostproviders/{id}",
+    "DELETE /ovirt-engine/api/v3/openstackvolumeproviders/{id}",
+    "GET /ovirt-engine/api/externalhostproviders",
+    "GET /ovirt-engine/api/externalhostproviders/{id}",
+    "GET /ovirt-engine/api/openstackvolumeproviders",
+    "GET /ovirt-engine/api/openstackvolumeproviders/{id}",
+    "GET /ovirt-engine/api/v3/externalhostproviders",
+    "GET /ovirt-engine/api/v3/externalhostproviders/{id}",
+    "GET /ovirt-engine/api/v3/openstackvolumeproviders",
+    "GET /ovirt-engine/api/v3/openstackvolumeproviders/{id}",
+    "POST /ovirt-engine/api/externalhostproviders",
+    "POST /ovirt-engine/api/hosts/{id}/unregisteredstoragedomainsdiscover",
+    "POST /ovirt-engine/api/openstackvolumeproviders",
+    "POST /ovirt-engine/api/v3/externalhostproviders",
+    "POST /ovirt-engine/api/v3/hosts/{id}/unregisteredstoragedomainsdiscover",
+    "POST /ovirt-engine/api/v3/openstackvolumeproviders",
+    "PUT /ovirt-engine/api/externalhostproviders/{id}",
+    "PUT /ovirt-engine/api/openstackvolumeproviders/{id}",
+    "PUT /ovirt-engine/api/v3/externalhostproviders/{id}",
+    "PUT /ovirt-engine/api/v3/openstackvolumeproviders/{id}"
+  ],
+  "removed": []
+}

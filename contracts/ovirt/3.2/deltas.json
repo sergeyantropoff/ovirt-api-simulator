@@ -1,0 +1,17 @@
+{
+  "series": "3.2",
+  "previous": "3.1",
+  "added_count": 8,
+  "removed_count": 0,
+  "added": [
+    "POST /ovirt-engine/api/disks/{id}/export",
+    "POST /ovirt-engine/api/templates/{id}/export",
+    "POST /ovirt-engine/api/v3/disks/{id}/export",
+    "POST /ovirt-engine/api/v3/templates/{id}/export",
+    "POST /ovirt-engine/api/v3/vms/{id}/export",
+    "POST /ovirt-engine/api/v3/vms/{id}/logon",
+    "POST /ovirt-engine/api/vms/{id}/export",
+    "POST /ovirt-engine/api/vms/{id}/logon"
+  ],
+  "removed": []
+}

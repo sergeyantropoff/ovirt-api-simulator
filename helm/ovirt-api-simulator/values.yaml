@@ -1,0 +1,53 @@
+image:
+  repository: inecs/ovirt-api-simulator
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+
+gateway:
+  enabled: true
+  ports:
+    http: 80
+    https: 443
+    httpsAlt: 8443
+    console: 5000
+
+ingress:
+  enabled: false
+  className: nginx
+  hosts:
+    - host: ovirt-engine.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+config:
+  ovirtSeries: "4.5"
+  logLevel: INFO
+
+# Required when postgresql.enabled=false (external Postgres DSN).
+databaseUrl: ""
+
+postgresql:
+  enabled: true
+  auth:
+    username: ovirt
+    password: ovirt
+    database: ovirt_simulator
+  persistence:
+    size: 10Gi
+
+migrate:
+  enabled: true
+
+seed:
+  enabled: true
+  profile: minimal
+
+secrets:
+  ticketSigningKey: development-only-signing-key-change-me

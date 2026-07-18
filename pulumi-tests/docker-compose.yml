@@ -1,0 +1,95 @@
+name: ovirt-lab-tests
+
+services:
+  postgres:
+    image: postgres:17.5-bookworm
+    environment:
+      POSTGRES_DB: ovirt_simulator
+      POSTGRES_USER: ovirt
+      POSTGRES_PASSWORD: ovirt
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ovirt -d ovirt_simulator"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: ..
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql://ovirt:ovirt@postgres:5432/ovirt_simulator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["python", "-m", "app.db.migrate_cli"]
+
+  simulator:
+    build:
+      context: ..
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql://ovirt:ovirt@postgres:5432/ovirt_simulator
+      OVIRT_SERIES: "4.5"
+      TICKET_SIGNING_KEY: development-only-signing-key-change-me
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  seed:
+    build:
+      context: ..
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql://ovirt:ovirt@postgres:5432/ovirt_simulator
+    depends_on:
+      simulator:
+        condition: service_healthy
+    entrypoint: ["python", "-m", "app.ovirt.seed_cli", "--profile", "demo"]
+
+  api-gateway:
+    image: nginx:1.28.0-alpine
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    ports:
+      - "16443:443"
+      - "16080:5000"
+    volumes:
+      - ../docker/gateway/ovirt-engine.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../docker/tls/server.crt:/etc/nginx/tls/server.crt:ro
+      - ../docker/tls/server.key:/etc/nginx/tls/server.key:ro
+
+  pulumi-runner:
+    profiles: [pulumi]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pulumi-runner
+    working_dir: /workspace/pulumi
+    environment:
+      OVIRT_URL: https://api-gateway
+      OVIRT_USER: admin@internal
+      OVIRT_PASSWORD: secret
+      OVIRT_VERIFY_TLS: "0"
+      OVIRT_CONTRACTS_ROOT: /contracts/ovirt
+      OVIRT_SERIES_FILTER: ${OVIRT_SERIES_FILTER:-}
+      OVIRT_METHODS_FILTER: ${OVIRT_METHODS_FILTER:-}
+      SMOKE_ONLY: ${SMOKE_ONLY:-0}
+      REPORT_DIR: /workspace/reports
+      PULUMI_CONFIG_PASSPHRASE: ovirt-lab
+      PULUMI_BACKEND_URL: file:///workspace/pulumi/.pulumi-state
+      PYTHONPATH: /workspace:/workspace/pulumi
+    volumes:
+      - ../contracts/ovirt:/contracts/ovirt:ro
+      - ./reports:/workspace/reports
+      - ./pulumi:/workspace/pulumi
+      - ./shared:/workspace/shared:ro
+    depends_on:
+      - api-gateway
+    entrypoint: ["python", "/workspace/pulumi/run_suite.py"]

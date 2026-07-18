@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ovirt-api-simulator"
+version = "0.1.0"
+description = "Stateful oVirt / RHV Engine API simulator for lab and client testing"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = { text = "Apache-2.0" }
+authors = [{ name = "ovirt-api-simulator contributors" }]
+dependencies = [
+  "asyncpg>=0.30,<0.31",
+  "fastapi>=0.116,<0.117",
+  "httpx>=0.28,<0.29",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.10,<3",
+  "python-multipart>=0.0.9,<1",
+  "uvicorn[standard]>=0.35,<0.36",
+]
+
+[project.optional-dependencies]
+dev = [
+  "hypothesis>=6.135,<7",
+  "mypy>=1.17,<1.18",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "pytest-cov>=6.2,<7",
+  "requests>=2.32,<3",
+  "ruff>=0.12,<0.13",
+]
+
+[project.scripts]
+ovirt-api-seed = "app.ovirt.seed_cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"contracts/ovirt" = "contracts/ovirt"
+"evidence" = "evidence"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105"]
+"tools/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "tests"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "integration: requires PostgreSQL or another external service",
+  "contract: validates imported API contracts",
+  "compatibility: exercises an external client against a running simulator",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+  "app/db/migrate_cli.py",
+]
+
+[tool.coverage.report]
+fail_under = 40
+show_missing = true

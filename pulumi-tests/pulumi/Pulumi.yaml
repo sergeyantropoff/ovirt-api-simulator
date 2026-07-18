@@ -1,0 +1,4 @@
+name: ovirt-contract-coverage
+runtime:
+  name: python
+description: Cover every oVirt Engine contract operation across all series packs via Pulumi Automation API

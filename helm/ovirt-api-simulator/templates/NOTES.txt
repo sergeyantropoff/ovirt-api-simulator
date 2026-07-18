@@ -1,0 +1,13 @@
+oVirt Engine API Simulator installed.
+
+Simulator Service: port {{ .Values.service.port }} ({{ .Values.service.type }})
+Engine API:  http://<svc>:{{ .Values.service.port }}/ovirt-engine/api
+SSO token:   POST /ovirt-engine/sso/oauth/token
+Web UI:      http://<svc>:{{ .Values.service.port }}/
+OpenAPI:     http://<svc>:{{ .Values.service.port }}/docs
+
+Credentials: admin@internal / secret
+Series: {{ .Values.config.ovirtSeries }}
+
+Note: Compose publishes Engine HTTPS (:443) + UI (:5000) via nginx gateway.
+This chart exposes the FastAPI app directly on :{{ .Values.service.port }}.

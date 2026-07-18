@@ -1,0 +1,4 @@
+.pulumi-state/
+venv/
+*.pyc
+__pycache__/

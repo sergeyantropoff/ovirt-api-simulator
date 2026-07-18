@@ -1,0 +1,26 @@
+FROM python:3.13-slim-bookworm
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PULUMI_CONFIG_PASSPHRASE=ovirt-lab \
+    PULUMI_SKIP_UPDATE_CHECK=true
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL https://get.pulumi.com | sh \
+    && mv /root/.pulumi/bin/pulumi /usr/local/bin/pulumi \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY pulumi/requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade "pip>=25.1,<26" && pip install -r /tmp/requirements.txt
+
+COPY shared /workspace/shared
+COPY pulumi /workspace/pulumi
+
+ENV PYTHONPATH=/workspace:/workspace/pulumi \
+    REPORT_DIR=/workspace/reports \
+    OVIRT_CONTRACTS_ROOT=/contracts/ovirt
+
+WORKDIR /workspace/pulumi
+ENTRYPOINT ["python", "run_suite.py"]

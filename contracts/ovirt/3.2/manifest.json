@@ -1,0 +1,99 @@
+{
+  "series": "3.2",
+  "major": 32,
+  "api_version": "3",
+  "product": {
+    "major": "3",
+    "minor": "2",
+    "full": "3.2.0"
+  },
+  "operation_count": 506,
+  "service_count": 1,
+  "services": [
+    "engine"
+  ],
+  "checksum": "49c672c0da726abe31624680f0b7326d21857b92c313af32b9b5ea6a35cce5bb",
+  "generated_at": "2026-07-16T04:31:47Z",
+  "entry_point_links": [
+    {
+      "rel": "bookmarks",
+      "href": "/ovirt-engine/api/bookmarks"
+    },
+    {
+      "rel": "clusters",
+      "href": "/ovirt-engine/api/clusters"
+    },
+    {
+      "rel": "datacenters",
+      "href": "/ovirt-engine/api/datacenters"
+    },
+    {
+      "rel": "disks",
+      "href": "/ovirt-engine/api/disks"
+    },
+    {
+      "rel": "domains",
+      "href": "/ovirt-engine/api/domains"
+    },
+    {
+      "rel": "events",
+      "href": "/ovirt-engine/api/events"
+    },
+    {
+      "rel": "groups",
+      "href": "/ovirt-engine/api/groups"
+    },
+    {
+      "rel": "hosts",
+      "href": "/ovirt-engine/api/hosts"
+    },
+    {
+      "rel": "jobs",
+      "href": "/ovirt-engine/api/jobs"
+    },
+    {
+      "rel": "networks",
+      "href": "/ovirt-engine/api/networks"
+    },
+    {
+      "rel": "permissions",
+      "href": "/ovirt-engine/api/permissions"
+    },
+    {
+      "rel": "roles",
+      "href": "/ovirt-engine/api/roles"
+    },
+    {
+      "rel": "storageconnections",
+      "href": "/ovirt-engine/api/storageconnections"
+    },
+    {
+      "rel": "storagedomains",
+      "href": "/ovirt-engine/api/storagedomains"
+    },
+    {
+      "rel": "tags",
+      "href": "/ovirt-engine/api/tags"
+    },
+    {
+      "rel": "templates",
+      "href": "/ovirt-engine/api/templates"
+    },
+    {
+      "rel": "users",
+      "href": "/ovirt-engine/api/users"
+    },
+    {
+      "rel": "vmpools",
+      "href": "/ovirt-engine/api/vmpools"
+    },
+    {
+      "rel": "vms",
+      "href": "/ovirt-engine/api/vms"
+    }
+  ],
+  "deltas": {
+    "added": 8,
+    "removed": 0
+  }
+}

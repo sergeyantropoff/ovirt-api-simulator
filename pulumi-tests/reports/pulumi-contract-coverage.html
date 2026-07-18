@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>oVirt Pulumi contract coverage</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1d2226;
+      --text: #f0f3f5;
+      --muted: #9aa3a8;
+      --ok: #3f9c35;
+      --bad: #c9190b;
+      --accent: #0076b6;
+      --line: #2d363c;
+    }
+    body {
+      margin: 0; padding: 32px;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: linear-gradient(160deg, #0f1419, #16202a 45%, #1a2733);
+      color: var(--text);
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: var(--muted); margin-bottom: 24px; }
+    .cards { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .card { background: var(--panel); border: 1px solid var(--line); padding: 16px; border-radius: 8px; }
+    .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .card .value { font-size: 28px; margin-top: 6px; font-weight: 600; }
+    .card.ok .value { color: var(--ok); }
+    .card.bad .value { color: var(--bad); }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); margin-bottom: 28px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13px; }
+    th { color: var(--muted); font-weight: 600; background: #161b1f; }
+    code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    h2 { font-size: 18px; margin: 0 0 12px; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>oVirt Pulumi contract coverage</h1>
+  <div class="sub">
+    Generated 2026-07-17T12:32:43Z
+    · Engine https://api-gateway
+  </div>
+  <div class="cards">
+    <div class="card"><div class="label">Total</div><div class="value">9150</div></div>
+    <div class="card ok"><div class="label">Passed</div><div class="value">9150</div></div>
+    <div class="card bad"><div class="label">Failed</div><div class="value">0</div></div>
+    <div class="card"><div class="label">Skipped</div><div class="value">0</div></div>
+  </div>
+
+  <h2>By HTTP method</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Count</th></tr></thead>
+    <tbody>
+      <tr><td>DELETE</td><td>1146</td></tr><tr><td>GET</td><td>2314</td></tr><tr><td>HEAD</td><td>2314</td></tr><tr><td>POST</td><td>2230</td></tr><tr><td>PUT</td><td>1146</td></tr>
+    </tbody>
+  </table>
+
+  <h2>By series</h2>
+  <table>
+    <thead><tr><th>Series</th><th>API</th><th>Total</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Duration</th></tr></thead>
+    <tbody>
+      <tr><td>3.0</td><td>3</td><td>622</td><td class='ok'>622</td><td class='bad'>0</td><td>0</td><td>2644 ms</td></tr><tr><td>3.1</td><td>3</td><td>664</td><td class='ok'>664</td><td class='bad'>0</td><td>0</td><td>1948 ms</td></tr><tr><td>3.2</td><td>3</td><td>672</td><td class='ok'>672</td><td class='bad'>0</td><td>0</td><td>1247 ms</td></tr><tr><td>3.3</td><td>3</td><td>770</td><td class='ok'>770</td><td class='bad'>0</td><td>0</td><td>1479 ms</td></tr><tr><td>3.4</td><td>3</td><td>800</td><td class='ok'>800</td><td class='bad'>0</td><td>0</td><td>1310 ms</td></tr><tr><td>3.5</td><td>3</td><td>858</td><td class='ok'>858</td><td class='bad'>0</td><td>0</td><td>1346 ms</td></tr><tr><td>3.6</td><td>3</td><td>918</td><td class='ok'>918</td><td class='bad'>0</td><td>0</td><td>1703 ms</td></tr><tr><td>4.3</td><td>4</td><td>948</td><td class='ok'>948</td><td class='bad'>0</td><td>0</td><td>2405 ms</td></tr><tr><td>4.4</td><td>4</td><td>966</td><td class='ok'>966</td><td class='bad'>0</td><td>0</td><td>2158 ms</td></tr><tr><td>4.5</td><td>4</td><td>966</td><td class='ok'>966</td><td class='bad'>0</td><td>0</td><td>1786 ms</td></tr><tr><td>master</td><td>4</td><td>966</td><td class='ok'>966</td><td class='bad'>0</td><td>0</td><td>1800 ms</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Failures (up to 500)</h2>
+  <table>
+    <thead><tr><th>Series</th><th>Operation</th><th>Method</th><th>Path</th><th>HTTP</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td colspan='6'>No failures.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Passed sample (first 100)</h2>
+  <table>
+    <thead><tr><th>Series</th><th>Operation</th><th>Method</th><th>HTTP</th><th>ms</th></tr></thead>
+    <tbody>
+      <tr><td>3.0</td><td><code>api.get</code></td><td>GET</td><td>200</td><td>6.46</td></tr><tr><td>3.0</td><td><code>bookmarks.list</code></td><td>GET</td><td>200</td><td>3.29</td></tr><tr><td>3.0</td><td><code>bookmarks.add</code></td><td>POST</td><td>201</td><td>2.94</td></tr><tr><td>3.0</td><td><code>bookmarks.get</code></td><td>GET</td><td>200</td><td>2.19</td></tr><tr><td>3.0</td><td><code>bookmarks.update</code></td><td>PUT</td><td>200</td><td>3.34</td></tr><tr><td>3.0</td><td><code>bookmarks.remove</code></td><td>DELETE</td><td>200</td><td>1.73</td></tr><tr><td>3.0</td><td><code>clusters.list</code></td><td>GET</td><td>200</td><td>1.91</td></tr><tr><td>3.0</td><td><code>clusters.add</code></td><td>POST</td><td>201</td><td>2.69</td></tr><tr><td>3.0</td><td><code>clusters.get</code></td><td>GET</td><td>200</td><td>1.61</td></tr><tr><td>3.0</td><td><code>clusters.update</code></td><td>PUT</td><td>200</td><td>2.26</td></tr><tr><td>3.0</td><td><code>clusters.remove</code></td><td>DELETE</td><td>200</td><td>2.58</td></tr><tr><td>3.0</td><td><code>clusters.resetemulatedmachine</code></td><td>POST</td><td>200</td><td>3.11</td></tr><tr><td>3.0</td><td><code>clusters.syncallnetworks</code></td><td>POST</td><td>200</td><td>3.36</td></tr><tr><td>3.0</td><td><code>clusters.refreshglusterhealstatus</code></td><td>POST</td><td>200</td><td>4.67</td></tr><tr><td>3.0</td><td><code>datacenters.list</code></td><td>GET</td><td>200</td><td>2.66</td></tr><tr><td>3.0</td><td><code>datacenters.add</code></td><td>POST</td><td>201</td><td>3.26</td></tr><tr><td>3.0</td><td><code>datacenters.get</code></td><td>GET</td><td>200</td><td>1.88</td></tr><tr><td>3.0</td><td><code>datacenters.update</code></td><td>PUT</td><td>200</td><td>3.12</td></tr><tr><td>3.0</td><td><code>datacenters.remove</code></td><td>DELETE</td><td>200</td><td>2.8</td></tr><tr><td>3.0</td><td><code>datacenters.cleanfinishedtasks</code></td><td>POST</td><td>200</td><td>2.45</td></tr><tr><td>3.0</td><td><code>disks.list</code></td><td>GET</td><td>200</td><td>2.03</td></tr><tr><td>3.0</td><td><code>disks.add</code></td><td>POST</td><td>201</td><td>3.03</td></tr><tr><td>3.0</td><td><code>disks.get</code></td><td>GET</td><td>200</td><td>1.37</td></tr><tr><td>3.0</td><td><code>disks.update</code></td><td>PUT</td><td>200</td><td>1.78</td></tr><tr><td>3.0</td><td><code>disks.remove</code></td><td>DELETE</td><td>200</td><td>1.79</td></tr><tr><td>3.0</td><td><code>disks.copy</code></td><td>POST</td><td>200</td><td>2.31</td></tr><tr><td>3.0</td><td><code>disks.move</code></td><td>POST</td><td>200</td><td>3.44</td></tr><tr><td>3.0</td><td><code>disks.sparsify</code></td><td>POST</td><td>200</td><td>3.76</td></tr><tr><td>3.0</td><td><code>domains.list</code></td><td>GET</td><td>200</td><td>2.14</td></tr><tr><td>3.0</td><td><code>domains.add</code></td><td>POST</td><td>404</td><td>2.59</td></tr><tr><td>3.0</td><td><code>domains.get</code></td><td>GET</td><td>200</td><td>1.68</td></tr><tr><td>3.0</td><td><code>domains.update</code></td><td>PUT</td><td>404</td><td>1.66</td></tr><tr><td>3.0</td><td><code>domains.remove</code></td><td>DELETE</td><td>404</td><td>1.67</td></tr><tr><td>3.0</td><td><code>events.list</code></td><td>GET</td><td>200</td><td>1.99</td></tr><tr><td>3.0</td><td><code>events.add</code></td><td>POST</td><td>404</td><td>1.65</td></tr><tr><td>3.0</td><td><code>events.get</code></td><td>GET</td><td>200</td><td>2.97</td></tr><tr><td>3.0</td><td><code>events.update</code></td><td>PUT</td><td>404</td><td>2.24</td></tr><tr><td>3.0</td><td><code>events.remove</code></td><td>DELETE</td><td>404</td><td>1.44</td></tr><tr><td>3.0</td><td><code>groups.list</code></td><td>GET</td><td>200</td><td>1.63</td></tr><tr><td>3.0</td><td><code>groups.add</code></td><td>POST</td><td>201</td><td>2.67</td></tr><tr><td>3.0</td><td><code>groups.get</code></td><td>GET</td><td>200</td><td>1.65</td></tr><tr><td>3.0</td><td><code>groups.update</code></td><td>PUT</td><td>200</td><td>2.04</td></tr><tr><td>3.0</td><td><code>groups.remove</code></td><td>DELETE</td><td>200</td><td>1.98</td></tr><tr><td>3.0</td><td><code>hosts.list</code></td><td>GET</td><td>200</td><td>1.85</td></tr><tr><td>3.0</td><td><code>hosts.add</code></td><td>POST</td><td>400</td><td>3.39</td></tr><tr><td>3.0</td><td><code>hosts.get</code></td><td>GET</td><td>404</td><td>4.18</td></tr><tr><td>3.0</td><td><code>hosts.update</code></td><td>PUT</td><td>404</td><td>4.38</td></tr><tr><td>3.0</td><td><code>hosts.remove</code></td><td>DELETE</td><td>200</td><td>2.83</td></tr><tr><td>3.0</td><td><code>hosts.activate</code></td><td>POST</td><td>200</td><td>5.51</td></tr><tr><td>3.0</td><td><code>hosts.deactivate</code></td><td>POST</td><td>200</td><td>5.01</td></tr><tr><td>3.0</td><td><code>hosts.approve</code></td><td>POST</td><td>200</td><td>4.2</td></tr><tr><td>3.0</td><td><code>hosts.install</code></td><td>POST</td><td>200</td><td>3.14</td></tr><tr><td>3.0</td><td><code>hosts.fence</code></td><td>POST</td><td>200</td><td>2.58</td></tr><tr><td>3.0</td><td><code>hosts.iscsidiscover</code></td><td>POST</td><td>200</td><td>4.61</td></tr><tr><td>3.0</td><td><code>hosts.iscsilogin</code></td><td>POST</td><td>200</td><td>3.89</td></tr><tr><td>3.0</td><td><code>hosts.commitnetconfig</code></td><td>POST</td><td>200</td><td>3.14</td></tr><tr><td>3.0</td><td><code>hosts.refresh</code></td><td>POST</td><td>200</td><td>3.82</td></tr><tr><td>3.0</td><td><code>hosts.upgradeCheck</code></td><td>POST</td><td>200</td><td>5.25</td></tr><tr><td>3.0</td><td><code>networks.list</code></td><td>GET</td><td>200</td><td>2.01</td></tr><tr><td>3.0</td><td><code>networks.add</code></td><td>POST</td><td>201</td><td>2.62</td></tr><tr><td>3.0</td><td><code>networks.get</code></td><td>GET</td><td>200</td><td>2.55</td></tr><tr><td>3.0</td><td><code>networks.update</code></td><td>PUT</td><td>200</td><td>4.08</td></tr><tr><td>3.0</td><td><code>networks.remove</code></td><td>DELETE</td><td>200</td><td>3.71</td></tr><tr><td>3.0</td><td><code>permissions.list</code></td><td>GET</td><td>200</td><td>2.62</td></tr><tr><td>3.0</td><td><code>permissions.add</code></td><td>POST</td><td>404</td><td>1.77</td></tr><tr><td>3.0</td><td><code>permissions.get</code></td><td>GET</td><td>200</td><td>1.92</td></tr><tr><td>3.0</td><td><code>permissions.update</code></td><td>PUT</td><td>404</td><td>1.53</td></tr><tr><td>3.0</td><td><code>permissions.remove</code></td><td>DELETE</td><td>404</td><td>1.28</td></tr><tr><td>3.0</td><td><code>roles.list</code></td><td>GET</td><td>200</td><td>1.37</td></tr><tr><td>3.0</td><td><code>roles.add</code></td><td>POST</td><td>201</td><td>2.4</td></tr><tr><td>3.0</td><td><code>roles.get</code></td><td>GET</td><td>200</td><td>1.41</td></tr><tr><td>3.0</td><td><code>roles.update</code></td><td>PUT</td><td>200</td><td>1.64</td></tr><tr><td>3.0</td><td><code>roles.remove</code></td><td>DELETE</td><td>200</td><td>1.47</td></tr><tr><td>3.0</td><td><code>storageconnections.list</code></td><td>GET</td><td>200</td><td>1.62</td></tr><tr><td>3.0</td><td><code>storageconnections.add</code></td><td>POST</td><td>201</td><td>2.04</td></tr><tr><td>3.0</td><td><code>storageconnections.get</code></td><td>GET</td><td>200</td><td>1.29</td></tr><tr><td>3.0</td><td><code>storageconnections.update</code></td><td>PUT</td><td>404</td><td>1.15</td></tr><tr><td>3.0</td><td><code>storageconnections.remove</code></td><td>DELETE</td><td>200</td><td>1.45</td></tr><tr><td>3.0</td><td><code>storagedomains.list</code></td><td>GET</td><td>200</td><td>1.5</td></tr><tr><td>3.0</td><td><code>storagedomains.add</code></td><td>POST</td><td>201</td><td>1.98</td></tr><tr><td>3.0</td><td><code>storagedomains.get</code></td><td>GET</td><td>200</td><td>1.3</td></tr><tr><td>3.0</td><td><code>storagedomains.update</code></td><td>PUT</td><td>200</td><td>1.55</td></tr><tr><td>3.0</td><td><code>storagedomains.remove</code></td><td>DELETE</td><td>200</td><td>1.58</td></tr><tr><td>3.0</td><td><code>storagedomains.refreshluns</code></td><td>POST</td><td>200</td><td>2.35</td></tr><tr><td>3.0</td><td><code>storagedomains.updateovfstore</code></td><td>POST</td><td>200</td><td>1.74</td></tr><tr><td>3.0</td><td><code>tags.list</code></td><td>GET</td><td>200</td><td>1.33</td></tr><tr><td>3.0</td><td><code>tags.add</code></td><td>POST</td><td>201</td><td>1.54</td></tr><tr><td>3.0</td><td><code>tags.get</code></td><td>GET</td><td>200</td><td>2.19</td></tr><tr><td>3.0</td><td><code>tags.update</code></td><td>PUT</td><td>200</td><td>1.72</td></tr><tr><td>3.0</td><td><code>tags.remove</code></td><td>DELETE</td><td>200</td><td>1.62</td></tr><tr><td>3.0</td><td><code>templates.list</code></td><td>GET</td><td>200</td><td>1.47</td></tr><tr><td>3.0</td><td><code>templates.add</code></td><td>POST</td><td>201</td><td>1.94</td></tr><tr><td>3.0</td><td><code>templates.get</code></td><td>GET</td><td>200</td><td>1.33</td></tr><tr><td>3.0</td><td><code>templates.update</code></td><td>PUT</td><td>404</td><td>1.21</td></tr><tr><td>3.0</td><td><code>templates.remove</code></td><td>DELETE</td><td>200</td><td>1.46</td></tr><tr><td>3.0</td><td><code>users.list</code></td><td>GET</td><td>200</td><td>1.35</td></tr><tr><td>3.0</td><td><code>users.add</code></td><td>POST</td><td>404</td><td>1.16</td></tr><tr><td>3.0</td><td><code>users.get</code></td><td>GET</td><td>200</td><td>1.38</td></tr><tr><td>3.0</td><td><code>users.update</code></td><td>PUT</td><td>404</td><td>1.18</td></tr><tr><td>3.0</td><td><code>users.remove</code></td><td>DELETE</td><td>404</td><td>1.19</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

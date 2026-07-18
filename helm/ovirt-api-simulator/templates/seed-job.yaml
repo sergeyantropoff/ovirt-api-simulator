@@ -1,0 +1,20 @@
+{{- if .Values.seed.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "ovirt-api-simulator.fullname" . }}-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python", "-m", "app.ovirt.seed_cli", "--profile", "{{ .Values.seed.profile }}"]
+          envFrom:
+            - secretRef:
+                name: {{ include "ovirt-api-simulator.fullname" . }}-secret
+{{- end }}
