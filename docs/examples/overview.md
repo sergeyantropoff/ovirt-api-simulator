@@ -29,7 +29,8 @@ export NO_PROXY='*'
 | [Python requests](python-requests.md) | Raw HTTPS Basic / OAuth |
 | [Ansible](ansible.md) | `uri` module against Engine |
 | [Terraform](terraform.md) | IaC notes |
-| [Pulumi](pulumi.md) | Full contract coverage + HTML report |
+| [Pulumi](pulumi.md) | Full contract coverage + HTML report (**9150/9150** as of 2026-07-18) |
 | [Troubleshooting clients](troubleshooting-clients.md) | Common client failures |
 
-Prerequisites: `make up && make seed` (or `make seed-demo`).
+Prerequisites: `make up && make seed` (or `make seed-demo`).  
+Full project test matrix: [Testing](../testing.md).

@@ -15,6 +15,7 @@ on each page. Russian mirrors live under [`ru/`](ru/README.md).
 | [Authentication](authentication.md) | Basic auth, OAuth2, sessions |
 | [API versions](api-versions.md) | Series packs 3.x / 4.x and Version header |
 | [API coverage](api_coverage.md) | Operation counts and deltas per series |
+| [Testing](testing.md) | Pytest / Pulumi commands + last verified results |
 | [API surface](api-surface.md) | Routing, handlers, schema engine |
 | [Clients & examples](clients.md) | curl, Python, Ansible, Terraform |
 | [Seed profiles](seed-profiles.md) | `minimal` and `demo` fixtures |

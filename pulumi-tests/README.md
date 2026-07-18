@@ -33,6 +33,17 @@ COVERAGE 9150/9150 (critical=0)
 METHODS {"DELETE":1146,"GET":2314,"HEAD":2314,"POST":2230,"PUT":1146}
 ```
 
+### Last verified full run (2026-07-18)
+
+| Metric | Value |
+|---|---:|
+| total / passed / failed / skipped | **9150 / 9150 / 0 / 0** |
+| methods | DELETE 1146 · GET 2314 · HEAD 2314 · POST 2230 · PUT 1146 |
+| HTTP | 200: 6739 · 404: 1514 · 201: 864 · 400: 22 · 409: 11 |
+
+Series: `3.0`–`3.6`, `4.3`–`4.5`, `master` — all green (no `401`, no `5xx`).  
+Project-wide matrix: [Testing](../docs/testing.md).
+
 Optional filters:
 
 ```bash

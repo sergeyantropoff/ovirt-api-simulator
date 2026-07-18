@@ -39,5 +39,6 @@ r = requests.get(
 )
 ```
 
-Нативный suite: `make test-python` / `make test-python-smoke` в
+Полная матрица контрактов (общий Engine surface для всех клиентов):
+`make pulumi-tests` — см. [Тестирование](../testing.md) и
 [`pulumi-tests/`](../../../pulumi-tests/README.ru.md).

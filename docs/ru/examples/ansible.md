@@ -25,5 +25,5 @@
       register: vms
 ```
 
-Нативный suite (150 кейсов): `make test-ansible` / `make test-ansible-smoke` в
-[`pulumi-tests/ansible/`](../../../pulumi-tests/README.ru.md).
+Покрытие контрактов Engine API: `make pulumi-tests` — см.
+[Тестирование](../testing.md) и [`pulumi-tests/`](../../../pulumi-tests/README.ru.md).

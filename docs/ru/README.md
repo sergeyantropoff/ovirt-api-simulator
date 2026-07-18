@@ -16,6 +16,7 @@
 | [Аутентификация](authentication.md) | Basic auth, OAuth2, сессии |
 | [Версии API](api-versions.md) | Series packs 3.x / 4.x и заголовок Version |
 | [Покрытие API](api_coverage.md) | Число операций и дельты по series |
+| [Тестирование](testing.md) | Pytest / Pulumi + последние результаты |
 | [Поверхность API](api-surface.md) | Маршрутизация, handlers, schema engine |
 | [Клиенты и примеры](clients.md) | curl, Python, Ansible, Terraform |
 | [Профили seed](seed-profiles.md) | Фикстуры `minimal` и `demo` |

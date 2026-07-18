@@ -22,5 +22,15 @@ Specialized handlers cover core inventory collections (VMs, disks, hosts,
 networks, storage, jobs, …). Remaining pack operations are served by the schema
 engine. See [API surface](api-surface.md).
 
+## Pulumi contract matrix
+
+`make pulumi-tests` executes **every** pack operation across all series, plus a
+synthetic **HEAD** for each GET (~6 836 contract ops + ~2 314 HEAD = **9 150**
+calls).
+
+**Last verified (2026-07-18):** **9150 / 9150** passed — methods GET/POST/PUT/DELETE/HEAD;
+HTTP mix 200/201/400/404/409; no `401` / `5xx`. See [Testing](testing.md) and
+[`pulumi-tests/README.md`](../pulumi-tests/README.md).
+
 > Measurable contract coverage for a laboratory simulator — not a claim that
 > every Engine edge case behaves identically to production RHV/oVirt.

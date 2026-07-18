@@ -39,5 +39,6 @@ r = requests.get(
 )
 ```
 
-Native suite: `make test-python` / `make test-python-smoke` under
+Full contract matrix (all clients share the same Engine surface):
+`make pulumi-tests` — see [Testing](../testing.md) and
 [`pulumi-tests/`](../../pulumi-tests/README.md).

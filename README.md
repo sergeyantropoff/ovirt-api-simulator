@@ -83,7 +83,7 @@ Or: `make release-up && make release-seed PROFILE=minimal`
 - Seed profiles: `minimal`, `small` (3h/50vm), `large` (10h/1000vm), `big` (30h/2000vm)
 - Web UI with oVirt branding (`#0076B6` / charcoal `#1D2226`)
 - Docker Compose + Helm
-- API tests + [`pulumi-tests/`](pulumi-tests/README.md) (Pulumi contract coverage)
+- API tests + [`pulumi-tests/`](pulumi-tests/README.md) (Pulumi contract coverage; **9150/9150** as of 2026-07-18)
 
 ## Make targets
 
@@ -102,6 +102,8 @@ make test-all            # alias for test-pulumi
 make push                # git add . → multi-line commit (Ctrl-D) → origin + antropoff
 # make push MSG="one line"       # skip the interactive editor
 ```
+
+Last full matrix: [Testing](docs/testing.md) (2026-07-18 — Pulumi **9150/9150**).
 
 Docker Hub release (requires `docker login` as the Hub owner; see
 [Operations](docs/operations.md)):
@@ -124,6 +126,7 @@ make release-up && make release-seed  # run the published stack locally
 | [Configuration](docs/configuration.md) | Environment and Compose |
 | [Seed profiles](docs/seed-profiles.md) | `minimal` / `small` / `large` / `big` |
 | [Web UI](docs/web-ui.md) | Interactive console (screenshots) |
+| [Testing](docs/testing.md) | Pytest / Pulumi + last verified results (**9150/9150**) |
 | [Kubernetes / Helm](docs/kubernetes.md) | Cluster install |
 | [Full index](docs/README.md) | All guides |
 

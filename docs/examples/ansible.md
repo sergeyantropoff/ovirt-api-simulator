@@ -25,5 +25,5 @@ Use `ansible.builtin.uri` against Engine HTTPS:
       register: vms
 ```
 
-Native suite (150 cases): `make test-ansible` / `make test-ansible-smoke` under
-[`pulumi-tests/ansible/`](../../pulumi-tests/README.md).
+Contract coverage for the Engine API: `make pulumi-tests` — see
+[Testing](../testing.md) and [`pulumi-tests/`](../../pulumi-tests/README.md).
