@@ -95,8 +95,8 @@ make test-pulumi-smoke   # Pulumi smoke
 make test-pulumi         # все series × все contract ops + HTML-отчёт
 make pulumi-tests        # alias для test-pulumi
 make test-all            # alias для test-pulumi
-make push                # git add . → запрос commit → push origin + antropoff
-# make push MSG="сообщение"      # сообщение без интерактива
+make push                # git add . → многострочный commit (Ctrl-D) → origin + antropoff
+# make push MSG="одна строка"    # без интерактивного ввода
 ```
 
 Публикация в Docker Hub (нужен `docker login` владельца Hub; см.

@@ -92,8 +92,8 @@ make test-pulumi-smoke   # Pulumi smoke
 make test-pulumi         # all series × all contract ops + HTML report
 make pulumi-tests        # alias for test-pulumi
 make test-all            # alias for test-pulumi
-make push                # git add . → prompt commit → push origin + antropoff
-# make push MSG="your message"   # non-interactive commit message
+make push                # git add . → multi-line commit (Ctrl-D) → origin + antropoff
+# make push MSG="one line"       # skip the interactive editor
 ```
 
 Docker Hub release (requires `docker login` as the Hub owner; see

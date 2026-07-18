@@ -221,25 +221,31 @@ clean-test-resources: ## Cleanup lab-created resources
 	$(MAKE) -C $(LAB) clean-test-resources
 
 # --- Git: stage, commit (prompt), push to both remotes ---
-push: ## git add . → ask for commit message → push to origin and antropoff
+# Multi-line commit: paste message, then Ctrl-D (same UX as proxmox-api-simulator).
+# Optional: make push MSG='one-line message'
+push: ## git add . → multi-line commit (Ctrl-D) → push origin + antropoff
 	@set -e; \
 	git add .; \
+	echo "=== staged ==="; \
+	git status --short; \
+	echo; \
 	if git diff --cached --quiet; then \
-		echo "Nothing staged to commit."; \
+		echo "Nothing to commit — pushing current branch."; \
 	else \
 		if [ -n "$(MSG)" ]; then \
 			msg="$(MSG)"; \
 		else \
-			printf "Commit message: "; \
-			IFS= read -r msg </dev/tty; \
+			echo "Enter commit message, then Ctrl-D:"; \
+			msg=$$(cat </dev/tty); \
 		fi; \
 		if [ -z "$$msg" ]; then \
-			echo "Empty commit message; aborting." >&2; \
+			echo "Empty commit message, aborting." >&2; \
 			exit 1; \
 		fi; \
 		git commit -m "$$msg"; \
 	fi; \
+	echo "Pushing to remotes: $(GIT_REMOTES)"; \
 	for remote in $(GIT_REMOTES); do \
-		echo "→ pushing HEAD to $$remote"; \
+		echo "→ $$remote ($$(git remote get-url --push "$$remote"))"; \
 		git push -u "$$remote" HEAD; \
 	done
