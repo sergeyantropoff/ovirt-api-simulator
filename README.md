@@ -13,6 +13,13 @@ The simulator is backed by PostgreSQL, driven by generated Engine contract packs
 and exposes the same `/ovirt-engine/api` and SSO OAuth2 surfaces as oVirt Engine.
 Semantic handlers persist mutations; long-running work is tracked as Engine jobs.
 
+### Web UI
+
+Interactive console with endpoint catalog, Engine-shaped Try-it bodies, series
+hot-swap, and seed data drawers.
+
+![Web UI main](docs/images/web-ui/console.png)
+
 ## Quick start (development checkout)
 
 ```bash
@@ -116,8 +123,11 @@ make release-up && make release-seed  # run the published stack locally
 | [API versions](docs/api-versions.md) | Series packs and Version header |
 | [Configuration](docs/configuration.md) | Environment and Compose |
 | [Seed profiles](docs/seed-profiles.md) | `minimal` / `small` / `large` / `big` |
+| [Web UI](docs/web-ui.md) | Interactive console (screenshots) |
 | [Kubernetes / Helm](docs/kubernetes.md) | Cluster install |
 | [Full index](docs/README.md) | All guides |
 
 Russian mirrors: [`README.ru.md`](README.ru.md) and [`docs/ru/`](docs/ru/README.md).
 Switch language with the header on each page.
+
+More screens and details: [Web UI](docs/web-ui.md).

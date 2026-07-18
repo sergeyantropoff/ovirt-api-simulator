@@ -6,6 +6,8 @@
 заголовка на каждой странице. Русские версии находятся в каталоге
 [`ru/`](README.md).
 
+![Web UI, главный экран](../images/web-ui/console.png)
+
 | Руководство | Описание |
 |---|---|
 | [Быстрый старт](getting-started.md) | Первая успешная лабораторная сессия |
@@ -30,3 +32,5 @@
 Исполняемые cookbook'и: [`examples/`](../../examples/README.ru.md).  
 Интеграционные наборы: [`pulumi-tests/`](../../pulumi-tests/README.ru.md).  
 Контрактные packs: [`contracts/`](../../contracts/README.ru.md).
+
+Больше экранов и подробностей: [Web UI](web-ui.md).
