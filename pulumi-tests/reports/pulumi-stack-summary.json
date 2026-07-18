@@ -3,6 +3,80 @@
   "passed": 9150,
   "failed": 0,
   "skipped": 0,
+  "coverage": {
+    "declared": 9150,
+    "probed": 9150,
+    "critical": 0,
+    "line": "9150/9150",
+    "series": [
+      {
+        "series": "3.0",
+        "declared": 622,
+        "probed": 622,
+        "critical": 0
+      },
+      {
+        "series": "3.1",
+        "declared": 664,
+        "probed": 664,
+        "critical": 0
+      },
+      {
+        "series": "3.2",
+        "declared": 672,
+        "probed": 672,
+        "critical": 0
+      },
+      {
+        "series": "3.3",
+        "declared": 770,
+        "probed": 770,
+        "critical": 0
+      },
+      {
+        "series": "3.4",
+        "declared": 800,
+        "probed": 800,
+        "critical": 0
+      },
+      {
+        "series": "3.5",
+        "declared": 858,
+        "probed": 858,
+        "critical": 0
+      },
+      {
+        "series": "3.6",
+        "declared": 918,
+        "probed": 918,
+        "critical": 0
+      },
+      {
+        "series": "4.3",
+        "declared": 948,
+        "probed": 948,
+        "critical": 0
+      },
+      {
+        "series": "4.4",
+        "declared": 966,
+        "probed": 966,
+        "critical": 0
+      },
+      {
+        "series": "4.5",
+        "declared": 966,
+        "probed": 966,
+        "critical": 0
+      },
+      {
+        "series": "master",
+        "declared": 966,
+        "probed": 966,
+        "critical": 0
+      }
+    ]
+  },
   "methods": {
     "DELETE": 1146,
     "GET": 2314,

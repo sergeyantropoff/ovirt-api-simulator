@@ -1,21 +1,195 @@
-"""Large demo datacenter seed (~1000 VMs + full inventory)."""
+"""Sized cluster demo seeds: small / large / big (+ demo→large alias)."""
 
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Any
 
 from asyncpg import Connection
 
 from app.ovirt.ids import stable_id
-from app.ovirt.seed import DEMO_PROFILE, clear_ovirt_state, seed_ovirt
+from app.ovirt.seed import clear_ovirt_state
 from app.security.auth import hash_secret
 
-DEMO_VM_COUNT = 1000
+
+@dataclass(frozen=True)
+class ClusterSizeSpec:
+    """Topology + inventory density for a demo cluster size."""
+
+    name: str
+    hosts: int
+    vms: int
+    datacenters: int
+    clusters_per_dc: int
+    hosts_per_cluster: int
+    networks_per_dc: int
+    storage_per_dc: int
+    templates: tuple[str, ...]
+    tags: tuple[str, ...]
+    groups: tuple[str, ...]
+    events: int
+    jobs: int
+    bookmarks: tuple[tuple[str, str], ...]
+    instancetypes: tuple[str, ...]
+    macpools: tuple[str, ...]
+    vmpools: tuple[str, ...]
+    affinitylabels: tuple[str, ...]
+    katelloerrata: tuple[str, ...]
+    icons: tuple[str, ...]
+    operatingsystems: tuple[str, ...]
 
 
-async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
-    """Replace state with a multi-DC demo inventory including ~1000 VMs."""
+CLUSTER_SIZES: dict[str, ClusterSizeSpec] = {
+    "small": ClusterSizeSpec(
+        name="small",
+        hosts=3,
+        vms=50,
+        datacenters=1,
+        clusters_per_dc=1,
+        hosts_per_cluster=3,
+        networks_per_dc=2,
+        storage_per_dc=2,
+        templates=("rhel9-base", "ubuntu2204-base"),
+        tags=("lab", "web"),
+        groups=("developers", "readers"),
+        events=15,
+        jobs=5,
+        bookmarks=(("UpVMs", "Vms: status=up"),),
+        instancetypes=("Small", "Medium"),
+        macpools=("Default",),
+        vmpools=("web-pool",),
+        affinitylabels=("label-a",),
+        katelloerrata=("RHSA-2024:0001",),
+        icons=("default",),
+        operatingsystems=("rhel_9x64", "ubuntu_22_04"),
+    ),
+    "large": ClusterSizeSpec(
+        name="large",
+        hosts=10,
+        vms=1000,
+        datacenters=2,
+        clusters_per_dc=1,
+        hosts_per_cluster=5,
+        networks_per_dc=3,
+        storage_per_dc=3,
+        templates=("rhel8-base", "rhel9-base", "win2022-base", "ubuntu2204-base"),
+        tags=("production", "web", "database", "batch", "gpu"),
+        groups=("developers", "operators", "readers"),
+        events=50,
+        jobs=20,
+        bookmarks=(
+            ("UpVMs", "Vms: status=up"),
+            ("DownVMs", "Vms: status=down"),
+        ),
+        instancetypes=("Tiny", "Small", "Medium", "Large", "XLarge"),
+        macpools=("Default", "Secondary"),
+        vmpools=("web-pool", "batch-pool"),
+        affinitylabels=("label-a", "label-b"),
+        katelloerrata=("RHSA-2024:0001", "RHBA-2024:0002"),
+        icons=("default", "custom"),
+        operatingsystems=("rhel_8x64", "rhel_9x64", "windows_2022", "ubuntu_22_04"),
+    ),
+    "big": ClusterSizeSpec(
+        name="big",
+        hosts=30,
+        vms=2000,
+        datacenters=3,
+        clusters_per_dc=2,
+        hosts_per_cluster=5,
+        networks_per_dc=3,
+        storage_per_dc=4,
+        templates=(
+            "rhel8-base",
+            "rhel9-base",
+            "win2022-base",
+            "ubuntu2204-base",
+            "centos-stream9",
+            "debian12-base",
+        ),
+        tags=(
+            "production",
+            "web",
+            "database",
+            "batch",
+            "gpu",
+            "edge",
+            "staging",
+            "critical",
+        ),
+        groups=("developers", "operators", "readers", "auditors"),
+        events=120,
+        jobs=40,
+        bookmarks=(
+            ("UpVMs", "Vms: status=up"),
+            ("DownVMs", "Vms: status=down"),
+            ("ProdHosts", "Hosts:"),
+        ),
+        instancetypes=("Tiny", "Small", "Medium", "Large", "XLarge", "2XLarge", "4XLarge"),
+        macpools=("Default", "Secondary", "Edge"),
+        vmpools=("web-pool", "batch-pool", "gpu-pool", "edge-pool"),
+        affinitylabels=("label-a", "label-b", "label-c", "label-d"),
+        katelloerrata=("RHSA-2024:0001", "RHBA-2024:0002", "RHSA-2024:1001"),
+        icons=("default", "custom", "windows", "linux"),
+        operatingsystems=(
+            "rhel_8x64",
+            "rhel_9x64",
+            "windows_2022",
+            "ubuntu_22_04",
+            "centos_stream9",
+            "debian_12",
+        ),
+    ),
+}
+
+# Canonical demo profile names that must not be wiped on simulator restart.
+DEMO_PROFILES: frozenset[str] = frozenset(CLUSTER_SIZES) | {"demo"}
+# Default / legacy alias target.
+DEMO_PROFILE = "large"
+DEMO_VM_COUNT = CLUSTER_SIZES["large"].vms
+
+
+def normalize_cluster_size(size: str | None) -> str:
+    """Map CLI/UI aliases to a ClusterSizeSpec name."""
+
+    key = (size or DEMO_PROFILE).strip().lower()
+    if key == "demo":
+        return "large"
+    if key not in CLUSTER_SIZES:
+        raise ValueError(f"unknown cluster size {size!r}; expected small|large|big|demo")
+    return key
+
+
+def cluster_size_spec(size: str | None = None) -> ClusterSizeSpec:
+    return CLUSTER_SIZES[normalize_cluster_size(size)]
+
+
+_DC_NAMES = (
+    ("dc-prod", "Production", False, 4, 5),
+    ("dc-stage", "Staging", False, 4, 4),
+    ("dc-edge", "Edge", True, 4, 3),
+)
+_NETWORK_SPECS = (("ovirtmgmt", None), ("vm-net", 100), ("storage-net", 200))
+_STORAGE_TYPES = ("nfs", "iscsi", "fcp", "localfs")
+_TEMPLATE_SPECS: dict[str, tuple[int, int]] = {
+    "rhel8-base": (4 * 1024**3, 2),
+    "rhel9-base": (4 * 1024**3, 2),
+    "win2022-base": (8 * 1024**3, 4),
+    "ubuntu2204-base": (2 * 1024**3, 2),
+    "centos-stream9": (4 * 1024**3, 2),
+    "debian12-base": (2 * 1024**3, 2),
+}
+
+
+async def seed_ovirt_demo(conn: Connection, size: str | None = None) -> dict[str, Any]:
+    """Replace state with a sized multi-host demo inventory."""
+
+    spec = cluster_size_spec(size)
+    expected_hosts = spec.datacenters * spec.clusters_per_dc * spec.hosts_per_cluster
+    if expected_hosts != spec.hosts:
+        raise RuntimeError(
+            f"cluster size {spec.name}: topology hosts {expected_hosts} != declared {spec.hosts}"
+        )
 
     await clear_ovirt_state(conn)
 
@@ -39,7 +213,7 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             admin,
         )
 
-    users = {}
+    users: dict[str, Any] = {}
     for uname, role in (
         ("admin", role_super),
         ("ops", role_cluster),
@@ -70,7 +244,7 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
         stable_id("group", "engine-admins"),
         domain_id,
     )
-    for gname in ("developers", "operators", "readers"):
+    for gname in spec.groups:
         await conn.execute(
             "INSERT INTO ov_groups(id, domain_id, name) VALUES($1,$2,$3)",
             stable_id("group", gname),
@@ -78,20 +252,14 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             gname,
         )
 
-    # 3 datacenters, multiple clusters/hosts/storage/networks
-    dc_specs = [
-        ("dc-prod", "Production", False, 4, 5),
-        ("dc-stage", "Staging", False, 4, 4),
-        ("dc-edge", "Edge", True, 4, 3),
-    ]
+    dc_specs = list(_DC_NAMES[: spec.datacenters])
     clusters: list[tuple[Any, Any, str]] = []
     hosts: list[Any] = []
     networks: list[Any] = []
     profiles: list[Any] = []
     storage_domains: list[Any] = []
 
-    storage_types = ["nfs", "iscsi", "fcp", "localfs"]
-    for dc_key, dc_name, local, maj, minor in dc_specs:
+    for dc_idx, (dc_key, dc_name, local, maj, minor) in enumerate(dc_specs):
         dc_id = stable_id("dc", dc_key)
         await conn.execute(
             """INSERT INTO ov_datacenters(id, name, description, local, status, version_major, version_minor)
@@ -109,8 +277,8 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             stable_id("quota", dc_key),
             dc_id,
         )
-        for ci in range(2):
-            cname = f"{dc_key}-cluster-{ci+1}"
+        for ci in range(spec.clusters_per_dc):
+            cname = f"{dc_key}-cluster-{ci + 1}"
             cid = stable_id("cluster", cname)
             clusters.append((cid, dc_id, cname))
             await conn.execute(
@@ -119,7 +287,7 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
                 cid,
                 dc_id,
                 cname,
-                f"Cluster {ci+1} in {dc_name}",
+                f"Cluster {ci + 1} in {dc_name}",
                 maj,
                 minor,
             )
@@ -129,8 +297,8 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
                 stable_id("ag", cname),
                 cid,
             )
-            for hi in range(4):
-                hname = f"{cname}-host-{hi+1:02d}"
+            for hi in range(spec.hosts_per_cluster):
+                hname = f"{cname}-host-{hi + 1:02d}"
                 hid = stable_id("host", hname)
                 hosts.append(hid)
                 await conn.execute(
@@ -139,19 +307,27 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
                     hid,
                     cid,
                     hname,
-                    f"10.{dc_specs.index((dc_key, dc_name, local, maj, minor))+10}.{ci+1}.{hi+10}",
+                    f"10.{10 + dc_idx}.{ci + 1}.{hi + 10}",
                     (256 + hi * 32) * 1024**3,
                 )
-        # networks
-        for nname, vlan in (("ovirtmgmt", None), ("vm-net", 100), ("storage-net", 200)):
+
+        for nname, vlan in _NETWORK_SPECS[: spec.networks_per_dc]:
             nid = stable_id("net", dc_key, nname)
             networks.append(nid)
+            if nname == "ovirtmgmt" and dc_key == "dc-prod":
+                net_label = "ovirtmgmt"
+            elif nname == "ovirtmgmt":
+                net_label = f"{dc_key}-ovirtmgmt"
+            elif spec.datacenters > 1:
+                net_label = f"{dc_key}-{nname}"
+            else:
+                net_label = nname
             await conn.execute(
                 """INSERT INTO ov_networks(id, datacenter_id, name, description, vlan_id)
                    VALUES($1,$2,$3,$4,$5)""",
                 nid,
                 dc_id,
-                nname if nname != "ovirtmgmt" else f"{dc_key}-ovirtmgmt" if dc_key != "dc-prod" else "ovirtmgmt",
+                net_label,
                 f"{nname} in {dc_name}",
                 vlan,
             )
@@ -163,9 +339,9 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
                 nid,
                 nname,
             )
-        # storage domains
-        for si, stype in enumerate(storage_types):
-            sname = f"{dc_key}-{stype}-{si+1}"
+
+        for si, stype in enumerate(_STORAGE_TYPES[: spec.storage_per_dc]):
+            sname = f"{dc_key}-{stype}-{si + 1}"
             sid = stable_id("sd", sname)
             storage_domains.append(sid)
             await conn.execute(
@@ -201,12 +377,8 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
         clusters[0][0],
         1024**3,
     )
-    for tname, mem, cores in (
-        ("rhel8-base", 4 * 1024**3, 2),
-        ("rhel9-base", 4 * 1024**3, 2),
-        ("win2022-base", 8 * 1024**3, 4),
-        ("ubuntu2204-base", 2 * 1024**3, 2),
-    ):
+    for tname in spec.templates:
+        mem, cores = _TEMPLATE_SPECS.get(tname, (2 * 1024**3, 2))
         await conn.execute(
             """INSERT INTO ov_templates(id, cluster_id, name, description, status, memory, cpu_sockets, cpu_cores)
                VALUES($1,$2,$3,$4,'ok',$5,1,$6)""",
@@ -218,11 +390,9 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             cores,
         )
 
-    # ~1000 VMs spread across clusters
     statuses = ["up", "up", "up", "down", "down", "suspended", "powering_up"]
-    os_types = ["rhel_8x64", "rhel_9x64", "ubuntu_22_04", "windows_2022", "other"]
+    os_types = list(spec.operatingsystems) or ["other"]
     default_profile = profiles[0]
-    default_sd = storage_domains[0]
 
     vm_rows = []
     disk_rows = []
@@ -230,13 +400,13 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
     nic_rows = []
     snap_rows = []
 
-    for i in range(DEMO_VM_COUNT):
-        cluster_id, _dc, cname = clusters[i % len(clusters)]
+    for i in range(spec.vms):
+        cluster_id, _dc, _cname = clusters[i % len(clusters)]
         host_id = hosts[i % len(hosts)] if i % 3 != 0 else None
         status = statuses[i % len(statuses)]
         if status == "down":
             host_id = None
-        name = f"vm-{i+1:04d}"
+        name = f"vm-{i + 1:04d}"
         vm_id = stable_id("vm", name)
         memory = (1 + (i % 8)) * 1024**3
         cores = 1 + (i % 8)
@@ -246,7 +416,7 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
                 cluster_id,
                 blank_id,
                 name,
-                f"Demo VM {i+1}",
+                f"Demo VM {i + 1}",
                 status,
                 memory,
                 1,
@@ -273,11 +443,8 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             )
         )
         if i % 7 == 0:
-            snap_rows.append(
-                (stable_id("snap", name, "1"), vm_id, f"snapshot-{name}", "ok")
-            )
+            snap_rows.append((stable_id("snap", name, "1"), vm_id, f"snapshot-{name}", "ok"))
 
-    # Batch insert VMs
     await conn.executemany(
         """INSERT INTO ov_vms(id, cluster_id, template_id, name, description, status,
            memory, cpu_sockets, cpu_cores, cpu_threads, os_type, type, host_id)
@@ -306,8 +473,8 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             snap_rows,
         )
 
-    # Tags, bookmarks, events, jobs, surface objects
-    for tname in ("production", "web", "database", "batch", "gpu"):
+    tag_step = max(1, spec.vms // 10)
+    for tname in spec.tags:
         tid = stable_id("tag", tname)
         await conn.execute(
             "INSERT INTO ov_tags(id, name, description) VALUES($1,$2,$3)",
@@ -315,20 +482,23 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             tname,
             f"Tag {tname}",
         )
-        for i in range(0, min(50, DEMO_VM_COUNT), 10):
+        for i in range(0, min(spec.vms, tag_step * 5), tag_step):
             await conn.execute(
                 """INSERT INTO ov_tag_assignments(id, tag_id, object_type, object_id)
                    VALUES($1,$2,'vm',$3) ON CONFLICT DO NOTHING""",
                 stable_id("ta", tname, str(i)),
                 tid,
-                stable_id("vm", f"vm-{i+1:04d}"),
+                stable_id("vm", f"vm-{i + 1:04d}"),
             )
 
-    await conn.execute(
-        "INSERT INTO ov_bookmarks(id, name, value) VALUES($1,'UpVMs','Vms: status=up')",
-        stable_id("bm", "UpVMs"),
-    )
-    for i in range(50):
+    for bname, bvalue in spec.bookmarks:
+        await conn.execute(
+            "INSERT INTO ov_bookmarks(id, name, value) VALUES($1,$2,$3)",
+            stable_id("bm", bname),
+            bname,
+            bvalue,
+        )
+    for i in range(spec.events):
         await conn.execute(
             """INSERT INTO ov_events(code, severity, description, user_id)
                VALUES($1,$2,$3,$4)""",
@@ -337,7 +507,7 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             f"Demo event {i}",
             users["admin"],
         )
-    for i in range(20):
+    for i in range(spec.jobs):
         jid = stable_id("job", str(i))
         await conn.execute(
             """INSERT INTO ov_jobs(id, description, status, owner_id)
@@ -354,24 +524,31 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
             f"Step for job {i}",
         )
 
-    for collection, names in (
-        ("instancetypes", ["Tiny", "Small", "Medium", "Large", "XLarge"]),
-        ("macpools", ["Default", "Secondary"]),
-        ("schedulingpolicies", ["evenly_distributed", "power_saving", "vm_evenly_distributed"]),
-        ("schedulingpolicyunits", ["EvenlyDistributed", "PowerSaving", "VmEvenlyDistributed"]),
-        ("clusterlevels", ["4.3", "4.4", "4.5"]),
-        ("icons", ["default", "custom"]),
-        ("operatingsystems", ["rhel_8x64", "rhel_9x64", "windows_2022", "ubuntu_22_04"]),
-        ("networkfilters", ["vdsm-no-mac-spoofing"]),
-        ("vmpools", ["web-pool", "batch-pool"]),
-        ("affinitylabels", ["label-a", "label-b"]),
-        ("katelloerrata", ["RHSA-2024:0001", "RHBA-2024:0002"]),
-        ("externalhostproviders", ["foreman-lab"]),
-        ("openstacknetworkproviders", ["ovn-provider"]),
-        ("openstackimageproviders", ["glance-lab"]),
-        ("openstackvolumeproviders", ["cinder-lab"]),
-        ("imagetransfers", ["transfer-1"]),
-    ):
+    surface: list[tuple[str, tuple[str, ...]]] = [
+        ("instancetypes", spec.instancetypes),
+        ("macpools", spec.macpools),
+        (
+            "schedulingpolicies",
+            ("evenly_distributed", "power_saving", "vm_evenly_distributed"),
+        ),
+        (
+            "schedulingpolicyunits",
+            ("EvenlyDistributed", "PowerSaving", "VmEvenlyDistributed"),
+        ),
+        ("clusterlevels", ("4.3", "4.4", "4.5")),
+        ("icons", spec.icons),
+        ("operatingsystems", spec.operatingsystems),
+        ("networkfilters", ("vdsm-no-mac-spoofing",)),
+        ("vmpools", spec.vmpools),
+        ("affinitylabels", spec.affinitylabels),
+        ("katelloerrata", spec.katelloerrata),
+        ("externalhostproviders", ("foreman-lab",)),
+        ("openstacknetworkproviders", ("ovn-provider",)),
+        ("openstackimageproviders", ("glance-lab",)),
+        ("openstackvolumeproviders", ("cinder-lab",)),
+        ("imagetransfers", ("transfer-1",)),
+    ]
+    for collection, names in surface:
         for name in names:
             await conn.execute(
                 """INSERT INTO ov_api_objects(id, collection, name, status, data)
@@ -389,41 +566,34 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
     from app.ovirt.seed_nested import seed_nested_for_inventory
 
     dc_ids = [stable_id("dc", key) for key, *_ in dc_specs]
-    cluster_ids = [c[0] for c in clusters]
-    template_ids = [
-        blank_id,
-        *[
-            stable_id("template", n)
-            for n in ("rhel8-base", "rhel9-base", "win2022-base", "ubuntu2204-base")
-        ],
-    ]
-    tag_ids = [stable_id("tag", t) for t in ("production", "web", "database", "batch", "gpu")]
+    template_ids = [blank_id, *[stable_id("template", n) for n in spec.templates]]
+    tag_ids = [stable_id("tag", t) for t in spec.tags]
     await seed_nested_for_inventory(
         conn,
         admin_user_id=users["admin"],
         role_user_id=role_user,
         datacenter_ids=dc_ids,
-        cluster_ids=cluster_ids,
+        cluster_ids=[c[0] for c in clusters],
         host_ids=list(hosts),
         network_ids=list(networks),
         storage_domain_ids=list(storage_domains),
         template_ids=template_ids,
-        vm_ids=[stable_id("vm", f"vm-{i:04d}") for i in range(1, DEMO_VM_COUNT + 1)],
-        disk_ids=[stable_id("disk", f"vm-{i:04d}") for i in range(1, DEMO_VM_COUNT + 1)],
+        vm_ids=[stable_id("vm", f"vm-{i:04d}") for i in range(1, spec.vms + 1)],
+        disk_ids=[stable_id("disk", f"vm-{i:04d}") for i in range(1, spec.vms + 1)],
         tag_ids=tag_ids,
         user_ids=list(users.values()),
         group_ids=[
             stable_id("group", n)
-            for n in ("engine-admins", "developers", "operators", "readers")
+            for n in ("engine-admins", *spec.groups)
         ],
     )
 
     await conn.execute(
-        "INSERT INTO ov_demo_meta(key, value) VALUES('profile', $1)", DEMO_PROFILE
+        "INSERT INTO ov_demo_meta(key, value) VALUES('profile', $1)", spec.name
     )
     return {
-        "profile": DEMO_PROFILE,
-        "vms": DEMO_VM_COUNT,
+        "profile": spec.name,
+        "vms": spec.vms,
         "hosts": len(hosts),
         "datacenters": len(dc_specs),
         "clusters": len(clusters),
@@ -432,5 +602,13 @@ async def seed_ovirt_demo(conn: Connection) -> dict[str, Any]:
     }
 
 
-# Re-export for web routes
-__all__ = ["DEMO_PROFILE", "DEMO_VM_COUNT", "clear_ovirt_state", "seed_ovirt", "seed_ovirt_demo"]
+__all__ = [
+    "CLUSTER_SIZES",
+    "DEMO_PROFILE",
+    "DEMO_PROFILES",
+    "DEMO_VM_COUNT",
+    "clear_ovirt_state",
+    "cluster_size_spec",
+    "normalize_cluster_size",
+    "seed_ovirt_demo",
+]

@@ -183,6 +183,18 @@ async def handle_engine_request(request: Request) -> Response:
             "DataError",
             "InvalidTextRepresentationError",
         } or "invalid input syntax for type uuid" in detail:
+            if name == "UniqueViolationError" or "duplicate key" in detail.lower():
+                raise OVirtError(
+                    "OperationFailed",
+                    "Entity already exists",
+                    status_code=409,
+                ) from exc
+            if name == "ForeignKeyViolationError":
+                raise OVirtError(
+                    "BadRequest",
+                    "Referenced entity does not exist",
+                    status_code=400,
+                ) from exc
             raise OVirtError("BadRequest", detail or name, status_code=400) from exc
         raise
 
@@ -354,6 +366,12 @@ async def _dispatch(
             payload,
         )
 
+    # Convenience top-level lists (pack ops are nested; avoid empty schema fallbacks).
+    if parts[0] == "affinitygroups":
+        return await _handle_top_affinity_groups(request, conn, method, parts)
+    if parts[0] == "quotas":
+        return await _handle_top_quotas(request, conn, method, parts)
+
     # Fall through to schema/generic object store
     from app.ovirt.schema_engine import handle_generic
 
@@ -383,13 +401,39 @@ async def _handle_vms(
             body = unwrap_entity(payload, "vm")
             name = str(body.get("name") or f"vm-{uuid4().hex[:8]}")
             cluster = body.get("cluster") or {}
-            cluster_id = cluster.get("id") if isinstance(cluster, dict) else None
+            cluster_id = None
+            if isinstance(cluster, dict):
+                cluster_id = cluster.get("id")
+                if cluster_id:
+                    exists = await conn.fetchval(
+                        "SELECT 1 FROM ov_clusters WHERE id=$1::uuid", cluster_id
+                    )
+                    if not exists:
+                        cluster_id = None
+                if not cluster_id and cluster.get("name"):
+                    cluster_id = await conn.fetchval(
+                        "SELECT id FROM ov_clusters WHERE name=$1 LIMIT 1",
+                        str(cluster["name"]),
+                    )
             if not cluster_id:
                 cluster_id = await conn.fetchval("SELECT id FROM ov_clusters ORDER BY name LIMIT 1")
             if not cluster_id:
                 raise OVirtError("BadRequest", "cluster is required", status_code=400)
             template = body.get("template") or {}
-            template_id = template.get("id") if isinstance(template, dict) else None
+            template_id = None
+            if isinstance(template, dict):
+                template_id = template.get("id")
+                if template_id:
+                    exists = await conn.fetchval(
+                        "SELECT 1 FROM ov_templates WHERE id=$1::uuid", template_id
+                    )
+                    if not exists:
+                        template_id = None
+                if not template_id and template.get("name"):
+                    template_id = await conn.fetchval(
+                        "SELECT id FROM ov_templates WHERE name=$1 LIMIT 1",
+                        str(template["name"]),
+                    )
             if not template_id:
                 template_id = await conn.fetchval(
                     "SELECT id FROM ov_templates WHERE name='Blank' LIMIT 1"
@@ -516,7 +560,20 @@ async def _handle_vms(
             raise OVirtError("NotFound", f"VM {vm_id} not found", status_code=404)
         if action == "clone":
             body = unwrap_entity(payload, "vm") if payload else {}
-            new_name = str(body.get("name") or f"{row['name']}-clone")
+            # Action root may wrap `vm: { name }` or place name on the action itself.
+            nested = body.get("vm") if isinstance(body.get("vm"), dict) else None
+            new_name = str(
+                (nested or {}).get("name")
+                or body.get("name")
+                or f"{row['name']}-clone"
+            )
+            existing = await conn.fetchval("SELECT 1 FROM ov_vms WHERE name=$1", new_name)
+            if existing:
+                raise OVirtError(
+                    "OperationFailed",
+                    f"Cannot clone VM. VM name '{new_name}' is already used.",
+                    status_code=409,
+                )
             new_id = uuid4()
             await conn.execute(
                 """INSERT INTO ov_vms(id, cluster_id, template_id, name, description, status,
@@ -535,6 +592,7 @@ async def _handle_vms(
                 row["os_type"],
                 row["type"],
             )
+            await _copy_vm_storage_and_nics(conn, source_vm_id=vm_id, target_vm_id=str(new_id))
             return await respond_action(
                 request, conn, description=f"Clone VM {row['name']}", owner_id=user_id
             )
@@ -605,7 +663,25 @@ async def _vm_disk_attachments(
             body = unwrap_entity(payload, "disk_attachment")
             disk = body.get("disk") or {}
             disk_id = disk.get("id") if isinstance(disk, dict) else None
-            if not disk_id:
+            if disk_id:
+                disk_row = await conn.fetchrow(
+                    "SELECT id FROM ov_disks WHERE id=$1::uuid", disk_id
+                )
+                if disk_row is None:
+                    raise OVirtError("NotFound", f"Disk {disk_id} not found", status_code=404)
+                already = await conn.fetchval(
+                    """SELECT 1 FROM ov_disk_attachments
+                       WHERE vm_id=$1::uuid AND disk_id=$2::uuid""",
+                    vm_id,
+                    disk_id,
+                )
+                if already:
+                    raise OVirtError(
+                        "OperationFailed",
+                        "Cannot attach Disk. Disk is already attached to this VM.",
+                        status_code=409,
+                    )
+            else:
                 size = int(
                     (disk or {}).get("provisioned_size")
                     or await option_int(conn, OPT_DEFAULT_DISK_SIZE)
@@ -695,6 +771,13 @@ async def _vm_nics(
         )
     if len(parts) >= 4:
         nic_id = parts[3]
+        if len(parts) == 4 and method == "GET":
+            r = await conn.fetchrow(
+                "SELECT * FROM ov_nics WHERE id=$1::uuid AND vm_id=$2::uuid", nic_id, vm_id
+            )
+            if r is None:
+                raise OVirtError("NotFound", "nic not found", status_code=404)
+            return respond(request, element="nic", data=nic_entity(r, vm_id=vm_id))
         if len(parts) == 4 and method == "DELETE":
             await conn.execute(
                 "DELETE FROM ov_nics WHERE id=$1::uuid AND vm_id=$2::uuid", nic_id, vm_id
@@ -712,9 +795,18 @@ async def _vm_nics(
                     profile_id,
                     body.get("name"),
                 )
+            elif body.get("name"):
+                await conn.execute(
+                    "UPDATE ov_nics SET name=$3 WHERE id=$1::uuid AND vm_id=$2::uuid",
+                    nic_id,
+                    vm_id,
+                    body.get("name"),
+                )
             r = await conn.fetchrow(
                 "SELECT * FROM ov_nics WHERE id=$1::uuid AND vm_id=$2::uuid", nic_id, vm_id
             )
+            if r is None:
+                raise OVirtError("NotFound", "nic not found", status_code=404)
             return respond(request, element="nic", data=nic_entity(r, vm_id=vm_id))
         if len(parts) == 5 and method == "POST" and parts[4] in {"activate", "deactivate"}:
             plugged = parts[4] == "activate"
@@ -763,6 +855,13 @@ async def _vm_snapshots(
         return respond(
             request, element="snapshot", data=snapshot_entity(row, vm_id=vm_id), status_code=201
         )
+    if len(parts) == 4 and method == "GET":
+        row = await conn.fetchrow(
+            "SELECT * FROM ov_snapshots WHERE id=$1::uuid AND vm_id=$2::uuid", parts[3], vm_id
+        )
+        if row is None:
+            raise OVirtError("NotFound", "snapshot not found", status_code=404)
+        return respond(request, element="snapshot", data=snapshot_entity(row, vm_id=vm_id))
     if len(parts) == 4 and method == "DELETE":
         await conn.execute(
             "DELETE FROM ov_snapshots WHERE id=$1::uuid AND vm_id=$2::uuid", parts[3], vm_id
@@ -788,6 +887,17 @@ async def _vm_tags(
         )
         items = [tag_entity(r) for r in rows]
         return respond(request, element="tag", collection="tags", data=items)
+    if len(parts) == 4 and method == "GET":
+        row = await conn.fetchrow(
+            """SELECT t.* FROM ov_tags t
+               JOIN ov_tag_assignments a ON a.tag_id=t.id
+               WHERE a.object_type='vm' AND a.object_id=$1::uuid AND t.id=$2::uuid""",
+            vm_id,
+            parts[3],
+        )
+        if row is None:
+            raise OVirtError("NotFound", "tag not found on vm", status_code=404)
+        return respond(request, element="tag", data=tag_entity(row))
     if len(parts) == 3 and method == "POST":
         body = unwrap_entity(payload, "tag")
         tag_id = body.get("id")
@@ -1049,16 +1159,25 @@ async def _handle_datacenters(
             rows = await conn.fetch(
                 "SELECT * FROM ov_quotas WHERE datacenter_id=$1::uuid ORDER BY name", dc_id
             )
-            items = [
-                {
-                    "id": str(r["id"]),
-                    "href": f"/ovirt-engine/api/datacenters/{dc_id}/quotas/{r['id']}",
-                    "name": r["name"],
-                    "description": r["description"],
-                }
-                for r in rows
-            ]
+            items = [_quota_entity(r, dc_id) for r in rows]
             return respond(request, element="quota", collection="quotas", data=items)
+        if method == "POST" and len(parts) == 3:
+            body = unwrap_entity(payload, "quota")
+            qid = uuid4()
+            await conn.execute(
+                """INSERT INTO ov_quotas(id, datacenter_id, name, description)
+                   VALUES($1,$2::uuid,$3,$4)""",
+                qid,
+                dc_id,
+                str(body.get("name") or f"quota-{qid.hex[:6]}"),
+                str(body.get("description") or ""),
+            )
+            r = await conn.fetchrow(
+                "SELECT * FROM ov_quotas WHERE id=$1 AND datacenter_id=$2::uuid", qid, dc_id
+            )
+            return respond(
+                request, element="quota", data=_quota_entity(r, dc_id), status_code=201
+            )
         if method == "GET" and len(parts) == 4:
             r = await conn.fetchrow(
                 "SELECT * FROM ov_quotas WHERE id=$1::uuid AND datacenter_id=$2::uuid",
@@ -1067,16 +1186,32 @@ async def _handle_datacenters(
             )
             if r is None:
                 raise OVirtError("NotFound", "quota not found", status_code=404)
-            return respond(
-                request,
-                element="quota",
-                data={
-                    "id": str(r["id"]),
-                    "href": f"/ovirt-engine/api/datacenters/{dc_id}/quotas/{r['id']}",
-                    "name": r["name"],
-                    "description": r["description"],
-                },
+            return respond(request, element="quota", data=_quota_entity(r, dc_id))
+        if method == "PUT" and len(parts) == 4:
+            body = unwrap_entity(payload, "quota")
+            await conn.execute(
+                """UPDATE ov_quotas SET name=COALESCE($3,name), description=COALESCE($4,description)
+                   WHERE id=$1::uuid AND datacenter_id=$2::uuid""",
+                parts[3],
+                dc_id,
+                body.get("name"),
+                body.get("description"),
             )
+            r = await conn.fetchrow(
+                "SELECT * FROM ov_quotas WHERE id=$1::uuid AND datacenter_id=$2::uuid",
+                parts[3],
+                dc_id,
+            )
+            if r is None:
+                raise OVirtError("NotFound", "quota not found", status_code=404)
+            return respond(request, element="quota", data=_quota_entity(r, dc_id))
+        if method == "DELETE" and len(parts) == 4:
+            await conn.execute(
+                "DELETE FROM ov_quotas WHERE id=$1::uuid AND datacenter_id=$2::uuid",
+                parts[3],
+                dc_id,
+            )
+            return Response(status_code=200)
     from app.ovirt.schema_engine import handle_subcollection
 
     if len(parts) >= 3:
@@ -1309,8 +1444,6 @@ async def _handle_clusters(
     if len(parts) == 2 and method == "DELETE":
         await conn.execute("DELETE FROM ov_clusters WHERE id=$1::uuid", cluster_id)
         return Response(status_code=200)
-    if len(parts) == 3 and method == "POST":
-        return await respond_action(request, conn, description=f"Cluster {parts[2]}")
     if len(parts) >= 3 and parts[2] == "affinitygroups":
         if method == "GET" and len(parts) == 3:
             rows = await conn.fetch(
@@ -1357,6 +1490,30 @@ async def _handle_clusters(
                 element="affinity_group",
                 data=_affinity_group_entity(r, cluster_id),
             )
+        if method == "PUT" and len(parts) == 4:
+            body = unwrap_entity(payload, "affinity_group")
+            await conn.execute(
+                """UPDATE ov_affinity_groups
+                   SET name=COALESCE($3,name), enforcing=COALESCE($4,enforcing),
+                       positive=COALESCE($5,positive), description=COALESCE($6,description)
+                   WHERE id=$1::uuid AND cluster_id=$2::uuid""",
+                parts[3],
+                cluster_id,
+                body.get("name"),
+                body.get("enforcing"),
+                body.get("positive"),
+                body.get("description"),
+            )
+            r = await conn.fetchrow(
+                "SELECT * FROM ov_affinity_groups WHERE id=$1::uuid AND cluster_id=$2::uuid",
+                parts[3],
+                cluster_id,
+            )
+            if r is None:
+                raise OVirtError("NotFound", "affinity group not found", status_code=404)
+            return respond(
+                request, element="affinity_group", data=_affinity_group_entity(r, cluster_id)
+            )
         if method == "DELETE" and len(parts) == 4:
             await conn.execute(
                 "DELETE FROM ov_affinity_groups WHERE id=$1::uuid AND cluster_id=$2::uuid",
@@ -1366,6 +1523,9 @@ async def _handle_clusters(
             return Response(status_code=200)
     if len(parts) >= 3 and parts[2] == "networks":
         return await _cluster_networks(request, conn, method, parts, payload)
+    if len(parts) == 3 and method == "POST":
+        # Known cluster actions only — do not steal collection POSTs.
+        return await respond_action(request, conn, description=f"Cluster {parts[2]}")
     from app.ovirt.schema_engine import handle_subcollection
 
     if len(parts) >= 3:
@@ -1694,12 +1854,27 @@ async def _handle_templates(
         tid = uuid4()
         vm = body.get("vm") or {}
         cluster_id = None
+        source_vm = None
         if isinstance(vm, dict) and vm.get("id"):
-            cluster_id = await conn.fetchval(
-                "SELECT cluster_id FROM ov_vms WHERE id=$1::uuid", vm["id"]
-            )
+            source_vm = await conn.fetchrow("SELECT * FROM ov_vms WHERE id=$1::uuid", vm["id"])
+            if source_vm is None:
+                raise OVirtError("NotFound", f"VM {vm['id']} not found", status_code=404)
+            cluster_id = source_vm["cluster_id"]
+        if not cluster_id:
+            cref = body.get("cluster") or {}
+            if isinstance(cref, dict) and cref.get("id"):
+                cluster_id = cref["id"]
+            elif isinstance(cref, dict) and cref.get("name"):
+                cluster_id = await conn.fetchval(
+                    "SELECT id FROM ov_clusters WHERE name=$1", cref["name"]
+                )
         if not cluster_id:
             cluster_id = await conn.fetchval("SELECT id FROM ov_clusters LIMIT 1")
+        memory = int(
+            body.get("memory")
+            or (source_vm["memory"] if source_vm else None)
+            or await option_int(conn, OPT_DEFAULT_VM_MEMORY)
+        )
         await conn.execute(
             """INSERT INTO ov_templates(id, cluster_id, name, description, memory)
                VALUES($1,$2,$3,$4,$5)""",
@@ -1707,8 +1882,13 @@ async def _handle_templates(
             cluster_id,
             str(body.get("name") or f"tpl-{tid.hex[:6]}"),
             str(body.get("description") or ""),
-            int(body.get("memory") or await option_int(conn, OPT_DEFAULT_VM_MEMORY)),
+            memory,
         )
+        if source_vm is not None:
+            await _seed_template_from_vm(conn, template_id=str(tid), vm_id=str(source_vm["id"]))
+            await create_job(
+                conn, description=f"Add Template {body.get('name') or tid}", owner_id=None
+            )
         row = await conn.fetchrow("SELECT * FROM ov_templates WHERE id=$1", tid)
         return respond(request, element="template", data=template_entity(row), status_code=201)
     tid = parts[1]
@@ -2034,20 +2214,42 @@ async def _handle_jobs(
         if r is None:
             raise OVirtError("NotFound", "job not found", status_code=404)
         return respond(request, element="job", data=job_entity(r))
-    if len(parts) == 3 and parts[2] == "steps" and method == "GET":
-        rows = await conn.fetch(
-            "SELECT * FROM ov_job_steps WHERE job_id=$1::uuid ORDER BY number", parts[1]
-        )
-        items = [
-            {
-                "id": str(r["id"]),
-                "description": r["description"],
-                "status": r["status"],
-                "type": r["type"],
-            }
-            for r in rows
-        ]
-        return respond(request, element="step", collection="steps", data=items)
+    if len(parts) >= 3 and parts[2] == "steps":
+        job_id = parts[1]
+        if len(parts) == 3 and method == "GET":
+            rows = await conn.fetch(
+                "SELECT * FROM ov_job_steps WHERE job_id=$1::uuid ORDER BY number", job_id
+            )
+            items = [
+                {
+                    "id": str(r["id"]),
+                    "href": f"/ovirt-engine/api/jobs/{job_id}/steps/{r['id']}",
+                    "description": r["description"],
+                    "status": r["status"],
+                    "type": r["type"],
+                }
+                for r in rows
+            ]
+            return respond(request, element="step", collection="steps", data=items)
+        if len(parts) == 4 and method == "GET":
+            r = await conn.fetchrow(
+                "SELECT * FROM ov_job_steps WHERE id=$1::uuid AND job_id=$2::uuid",
+                parts[3],
+                job_id,
+            )
+            if r is None:
+                raise OVirtError("NotFound", "step not found", status_code=404)
+            return respond(
+                request,
+                element="step",
+                data={
+                    "id": str(r["id"]),
+                    "href": f"/ovirt-engine/api/jobs/{job_id}/steps/{r['id']}",
+                    "description": r["description"],
+                    "status": r["status"],
+                    "type": r["type"],
+                },
+            )
     raise OVirtError("NotFound", "jobs path", status_code=404)
 
 
@@ -2055,7 +2257,7 @@ async def _handle_events(
     request: Request, conn: Connection, method: str, parts: list[str]
 ) -> Response:
     if len(parts) == 1 and method == "GET":
-        max_r = int(request.query_params.get("max") or 100)
+        max_r = int(request.query_params.get("max") or 500)
         rows = await conn.fetch(
             "SELECT * FROM ov_events ORDER BY id DESC LIMIT $1", max_r
         )
@@ -2080,20 +2282,27 @@ async def _handle_events(
             element="event",
             data={
                 "id": str(r["id"]),
+                "href": f"/ovirt-engine/api/events/{r['id']}",
                 "code": r["code"],
                 "severity": r["severity"],
                 "description": r["description"],
+                "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             },
         )
     raise OVirtError("NotFound", "events path", status_code=404)
 
 
-def _row_entity(r: Any, collection: str, fields: list[str]) -> dict[str, Any]:
-    item = {"id": str(r["id"]), "href": f"/ovirt-engine/api/{collection}/{r['id']}"}
-    for f in fields:
-        if f in r.keys():
-            item[f] = r[f]
-    return item
+def _quota_entity(r: Any, dc_id: str) -> dict[str, Any]:
+    return {
+        "id": str(r["id"]),
+        "href": f"/ovirt-engine/api/datacenters/{dc_id}/quotas/{r['id']}",
+        "name": r["name"],
+        "description": r["description"] or "",
+        "data_center": {
+            "id": str(dc_id),
+            "href": f"/ovirt-engine/api/datacenters/{dc_id}",
+        },
+    }
 
 
 def _affinity_group_entity(r: Any, cluster_id: str) -> dict[str, Any]:
@@ -2104,7 +2313,174 @@ def _affinity_group_entity(r: Any, cluster_id: str) -> dict[str, Any]:
         "description": r["description"] or "",
         "enforcing": bool(r["enforcing"]),
         "positive": bool(r["positive"]),
+        "cluster": {
+            "id": str(cluster_id),
+            "href": f"/ovirt-engine/api/clusters/{cluster_id}",
+        },
     }
+
+
+async def _handle_top_affinity_groups(
+    request: Request, conn: Connection, method: str, parts: list[str]
+) -> Response:
+    if len(parts) == 1 and method == "GET":
+        rows = await conn.fetch(
+            "SELECT * FROM ov_affinity_groups ORDER BY name"
+        )
+        items = [_affinity_group_entity(r, str(r["cluster_id"])) for r in rows]
+        return respond(
+            request, element="affinity_group", collection="affinity_groups", data=items
+        )
+    if len(parts) == 2 and method == "GET":
+        r = await conn.fetchrow("SELECT * FROM ov_affinity_groups WHERE id=$1::uuid", parts[1])
+        if r is None:
+            raise OVirtError("NotFound", "affinity group not found", status_code=404)
+        return respond(
+            request, element="affinity_group", data=_affinity_group_entity(r, str(r["cluster_id"]))
+        )
+    raise OVirtError("NotFound", "affinitygroups path", status_code=404)
+
+
+async def _handle_top_quotas(
+    request: Request, conn: Connection, method: str, parts: list[str]
+) -> Response:
+    if len(parts) == 1 and method == "GET":
+        rows = await conn.fetch("SELECT * FROM ov_quotas ORDER BY name")
+        items = [_quota_entity(r, str(r["datacenter_id"])) for r in rows]
+        return respond(request, element="quota", collection="quotas", data=items)
+    if len(parts) == 2 and method == "GET":
+        r = await conn.fetchrow("SELECT * FROM ov_quotas WHERE id=$1::uuid", parts[1])
+        if r is None:
+            raise OVirtError("NotFound", "quota not found", status_code=404)
+        return respond(
+            request, element="quota", data=_quota_entity(r, str(r["datacenter_id"]))
+        )
+    raise OVirtError("NotFound", "quotas path", status_code=404)
+
+
+async def _copy_vm_storage_and_nics(
+    conn: Connection, *, source_vm_id: str, target_vm_id: str
+) -> None:
+    """Clone disk attachments (new disk rows) and NICs onto a target VM."""
+
+    attachments = await conn.fetch(
+        """SELECT a.*, d.name AS disk_name, d.provisioned_size, d.actual_size, d.format,
+                  d.sparse, d.storage_domain_id, d.description AS disk_description
+           FROM ov_disk_attachments a
+           JOIN ov_disks d ON d.id=a.disk_id
+           WHERE a.vm_id=$1::uuid""",
+        source_vm_id,
+    )
+    for att in attachments:
+        new_disk_id = uuid4()
+        await conn.execute(
+            """INSERT INTO ov_disks(id, name, description, provisioned_size, actual_size,
+               format, sparse, storage_domain_id)
+               VALUES($1,$2,$3,$4,$5,$6,$7,$8)""",
+            new_disk_id,
+            f"{att['disk_name']}-clone" if att["disk_name"] else f"disk-{new_disk_id.hex[:8]}",
+            att["disk_description"] or "",
+            att["provisioned_size"],
+            att["actual_size"],
+            att["format"],
+            att["sparse"],
+            att["storage_domain_id"],
+        )
+        await conn.execute(
+            """INSERT INTO ov_disk_attachments(id, vm_id, disk_id, active, bootable, interface)
+               VALUES($1,$2::uuid,$3,$4,$5,$6)""",
+            uuid4(),
+            target_vm_id,
+            new_disk_id,
+            bool(att["active"]),
+            bool(att["bootable"]),
+            att["interface"],
+        )
+    nics = await conn.fetch("SELECT * FROM ov_nics WHERE vm_id=$1::uuid", source_vm_id)
+    for nic in nics:
+        new_nic_id = uuid4()
+        mac_suffix = ":".join(f"{(new_nic_id.int >> (8 * i)) & 0xFF:02x}" for i in range(3))
+        mac = (nic["mac_address"] or "00:1a:4a:00:00:00")[:9] + mac_suffix
+        await conn.execute(
+            """INSERT INTO ov_nics(id, vm_id, name, interface, linked, plugged, mac_address, vnic_profile_id)
+               VALUES($1,$2::uuid,$3,$4,$5,$6,$7,$8)""",
+            new_nic_id,
+            target_vm_id,
+            nic["name"],
+            nic["interface"],
+            bool(nic["linked"]),
+            bool(nic["plugged"]),
+            mac,
+            nic["vnic_profile_id"],
+        )
+
+
+async def _seed_template_from_vm(
+    conn: Connection, *, template_id: str, vm_id: str
+) -> None:
+    """Materialize template nested nics/diskattachments from a source VM."""
+
+    import json as _json
+
+    from app.ovirt.ids import stable_id
+
+    nics = await conn.fetch("SELECT * FROM ov_nics WHERE vm_id=$1::uuid ORDER BY name", vm_id)
+    for nic in nics:
+        await conn.execute(
+            """INSERT INTO ov_api_objects(
+                   id, collection, name, status, parent_collection, parent_id, data
+               ) VALUES($1,'nics',$2,'ok','templates',$3::uuid,$4::jsonb)
+               ON CONFLICT (id) DO NOTHING""",
+            stable_id("nested", "templates", template_id, "nics", nic["name"]),
+            nic["name"],
+            template_id,
+            _json.dumps(
+                {
+                    "name": nic["name"],
+                    "interface": nic["interface"],
+                    "vnic_profile": (
+                        {"id": str(nic["vnic_profile_id"])} if nic["vnic_profile_id"] else None
+                    ),
+                }
+            ),
+        )
+    attachments = await conn.fetch(
+        """SELECT a.*, d.name AS disk_name, d.provisioned_size, d.format
+           FROM ov_disk_attachments a JOIN ov_disks d ON d.id=a.disk_id
+           WHERE a.vm_id=$1::uuid ORDER BY d.name""",
+        vm_id,
+    )
+    for att in attachments:
+        name = att["disk_name"] or f"disk-{att['disk_id']}"
+        await conn.execute(
+            """INSERT INTO ov_api_objects(
+                   id, collection, name, status, parent_collection, parent_id, data
+               ) VALUES($1,'diskattachments',$2,'ok','templates',$3::uuid,$4::jsonb)
+               ON CONFLICT (id) DO NOTHING""",
+            stable_id("nested", "templates", template_id, "diskattachments", name),
+            name,
+            template_id,
+            _json.dumps(
+                {
+                    "name": name,
+                    "bootable": bool(att["bootable"]),
+                    "interface": att["interface"],
+                    "disk": {
+                        "name": name,
+                        "provisioned_size": att["provisioned_size"],
+                        "format": att["format"],
+                    },
+                }
+            ),
+        )
+
+
+def _row_entity(r: Any, collection: str, fields: list[str]) -> dict[str, Any]:
+    item = {"id": str(r["id"]), "href": f"/ovirt-engine/api/{collection}/{r['id']}"}
+    for f in fields:
+        if f in r.keys():
+            item[f] = r[f]
+    return item
 
 
 def _vnic_profile_entity(r: Any) -> dict[str, Any]:

@@ -121,10 +121,10 @@ def render_html(payload: dict[str, Any]) -> str:
     · Engine {html.escape(str(payload.get('engine_url')))}
   </div>
   <div class="cards">
-    <div class="card"><div class="label">Total</div><div class="value">{totals.get('total', 0)}</div></div>
+    <div class="card"><div class="label">Total / Declared</div><div class="value">{totals.get('total', 0)}</div></div>
     <div class="card ok"><div class="label">Passed</div><div class="value">{totals.get('passed', 0)}</div></div>
-    <div class="card bad"><div class="label">Failed</div><div class="value">{totals.get('failed', 0)}</div></div>
-    <div class="card"><div class="label">Skipped</div><div class="value">{totals.get('skipped', 0)}</div></div>
+    <div class="card bad"><div class="label">Critical</div><div class="value">{(payload.get('coverage') or {}).get('critical', totals.get('failed', 0))}</div></div>
+    <div class="card"><div class="label">Coverage</div><div class="value">{html.escape(str((payload.get('coverage') or {}).get('line', f"{totals.get('total', 0)}/{totals.get('total', 0)}")))}</div></div>
   </div>
 
   <h2>By HTTP method</h2>

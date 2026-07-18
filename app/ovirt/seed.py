@@ -11,7 +11,8 @@ from app.ovirt.ids import stable_id
 from app.security.auth import hash_secret
 
 MINIMAL_PROFILE = "minimal"
-DEMO_PROFILE = "demo"
+# Legacy name kept for imports; sized demos live in demo_datacenter.DEMO_PROFILES.
+DEMO_PROFILE = "large"
 
 
 async def clear_ovirt_state(conn: Connection) -> None:
@@ -239,6 +240,8 @@ async def seed_ovirt(conn: Connection) -> dict[str, Any]:
         ("instancetypes", "Large"),
         ("macpools", "Default"),
         ("schedulingpolicies", "evenly_distributed"),
+        ("schedulingpolicies", "power_saving"),
+        ("schedulingpolicies", "vm_evenly_distributed"),
         ("schedulingpolicyunits", "EvenlyDistributed"),
         ("clusterlevels", "4.5"),
         ("icons", "default"),
@@ -255,7 +258,8 @@ async def seed_ovirt(conn: Connection) -> dict[str, Any]:
     ):
         await conn.execute(
             """INSERT INTO ov_api_objects(id, collection, name, status, data)
-               VALUES($1,$2,$3,'ok',$4::jsonb)""",
+               VALUES($1,$2,$3,'ok',$4::jsonb)
+               ON CONFLICT (id) DO NOTHING""",
             stable_id("obj", collection, name),
             collection,
             name,
@@ -330,10 +334,19 @@ async def seed_ovirt(conn: Connection) -> dict[str, Any]:
 
 
 async def ovirt_demo_summary(conn: Connection) -> dict[str, Any]:
+    from app.ovirt.demo_datacenter import CLUSTER_SIZES, DEMO_PROFILES
+
     profile = await conn.fetchval("SELECT value FROM ov_demo_meta WHERE key='profile'")
+    active = profile or MINIMAL_PROFILE
+    size = CLUSTER_SIZES.get(active) or (
+        CLUSTER_SIZES["large"] if active == "demo" else None
+    )
     return {
-        "profile": profile or MINIMAL_PROFILE,
-        "loaded": profile == DEMO_PROFILE,
+        "profile": active,
+        "loaded": active in DEMO_PROFILES,
+        "size": size.name if size else None,
+        "size_hosts": size.hosts if size else None,
+        "size_vms": size.vms if size else None,
         "vms": await conn.fetchval("SELECT count(*) FROM ov_vms") or 0,
         "hosts": await conn.fetchval("SELECT count(*) FROM ov_hosts") or 0,
         "datacenters": await conn.fetchval("SELECT count(*) FROM ov_datacenters") or 0,

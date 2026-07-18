@@ -38,7 +38,7 @@ def create_lifespan(
         await database.connect()
         app.state.database = database
         if isinstance(database, AsyncpgDatabase):
-            from app.ovirt.demo_datacenter import DEMO_PROFILE
+            from app.ovirt.demo_datacenter import DEMO_PROFILES
             from app.ovirt.seed import seed_ovirt
             from app.ovirt.settings import seed_engine_options
 
@@ -49,7 +49,7 @@ def create_lifespan(
                     )
                 except Exception:
                     profile = None
-                if profile != DEMO_PROFILE:
+                if profile not in DEMO_PROFILES:
                     await seed_ovirt(connection)
                 else:
                     # Keep Engine options current without wiping demo inventory.

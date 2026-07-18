@@ -127,6 +127,19 @@ async def seed_nested_for_inventory(
                 data={"description": "Gluster feature"},
             )
         )
+        obj_rows.append(
+            _obj_row(
+                parent_collection="clusters",
+                parent_id=cluster_id,
+                collection="glustervolumes",
+                name="gv0",
+                data={
+                    "volume_type": "distribute",
+                    "replica_count": 1,
+                    "status": "up",
+                },
+            )
+        )
 
     for host_id in host_ids:
         perm("host", host_id, f"host-{host_id}")
@@ -184,6 +197,24 @@ async def seed_nested_for_inventory(
                 data={"event_name": "before_vm_start"},
             )
         )
+        obj_rows.append(
+            _obj_row(
+                parent_collection="hosts",
+                parent_id=host_id,
+                collection="storage",
+                name="local-data",
+                data={"type": "data", "path": "/var/lib/ovirt/storage", "status": "up"},
+            )
+        )
+        obj_rows.append(
+            _obj_row(
+                parent_collection="hosts",
+                parent_id=host_id,
+                collection="katelloerrata",
+                name="RHSA-2024:0001",
+                data={"title": "Important: kernel security update"},
+            )
+        )
         if tag_ids:
             tag_rows.append(
                 (
@@ -196,6 +227,15 @@ async def seed_nested_for_inventory(
 
     for net_id in network_ids:
         perm("network", net_id, f"net-{net_id}")
+        obj_rows.append(
+            _obj_row(
+                parent_collection="networks",
+                parent_id=net_id,
+                collection="networklabels",
+                name="ovirtmgmt",
+                data={"description": "Management network label"},
+            )
+        )
 
     for sd_id in storage_domain_ids:
         perm("storage_domain", sd_id, f"sd-{sd_id}")
@@ -263,6 +303,24 @@ async def seed_nested_for_inventory(
                 collection="cdroms",
                 name="ide0",
                 data={"file": {"id": "rhel-9.iso"}},
+            )
+        )
+        obj_rows.append(
+            _obj_row(
+                parent_collection="templates",
+                parent_id=tpl_id,
+                collection="graphicsconsoles",
+                name="spice",
+                data={"protocol": "spice"},
+            )
+        )
+        obj_rows.append(
+            _obj_row(
+                parent_collection="templates",
+                parent_id=tpl_id,
+                collection="watchdogs",
+                name="i6300esb",
+                data={"model": "i6300esb", "action": "reset"},
             )
         )
 
@@ -376,7 +434,41 @@ async def seed_nested_for_inventory(
                     name="pci_0000_00_02_0",
                     data={"capability": "pci"},
                 ),
+                _obj_row(
+                    parent_collection="vms",
+                    parent_id=vm_id,
+                    collection="mediateddevices",
+                    name="mdev0",
+                    data={"spec_params": {"mdev_type": "nvidia-11"}},
+                ),
+                _obj_row(
+                    parent_collection="vms",
+                    parent_id=vm_id,
+                    collection="affinitylabels",
+                    name="label-a",
+                    data={"description": "VM affinity label"},
+                ),
+                _obj_row(
+                    parent_collection="vms",
+                    parent_id=vm_id,
+                    collection="katelloerrata",
+                    name="RHSA-2024:0001",
+                    data={"title": "Important: qemu-kvm security update"},
+                ),
             ]
+        )
+
+    for user_id in user_ids:
+        obj_rows.append(
+            _obj_row(
+                parent_collection="users",
+                parent_id=user_id,
+                collection="sshpublickeys",
+                name="lab-key",
+                data={
+                    "content": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILabSeedKey admin@lab",
+                },
+            )
         )
 
     # Scheduling policy children + role permits

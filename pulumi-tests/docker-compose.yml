@@ -51,7 +51,7 @@ services:
     depends_on:
       simulator:
         condition: service_healthy
-    entrypoint: ["python", "-m", "app.ovirt.seed_cli", "--profile", "demo"]
+    entrypoint: ["python", "-m", "app.ovirt.seed_cli", "--profile", "minimal"]
 
   api-gateway:
     image: nginx:1.28.0-alpine

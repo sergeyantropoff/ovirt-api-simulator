@@ -41,6 +41,7 @@ _COLLECTIONS: dict[str, tuple[str, str]] = {
     "networklabels": ("network_label", "ok"),
     "cpuprofiles": ("cpu_profile", "ok"),
     "diskprofiles": ("disk_profile", "ok"),
+    "diskattachments": ("disk_attachment", "ok"),
     "qoss": ("qos", "ok"),
     "iscsibonds": ("iscsi_bond", "ok"),
     "glustervolumes": ("gluster_volume", "ok"),
@@ -65,6 +66,7 @@ _COLLECTIONS: dict[str, tuple[str, str]] = {
     "devices": ("host_device", "ok"),
     "sshpublickeys": ("ssh_public_key", "ok"),
     "networkfilterparameters": ("network_filter_parameter", "ok"),
+    "storage": ("host_storage", "ok"),
 }
 
 
@@ -87,7 +89,10 @@ async def handle_generic(
     if len(parts) == 1:
         if method == "GET":
             rows = await conn.fetch(
-                "SELECT * FROM ov_api_objects WHERE collection=$1 ORDER BY name", collection
+                """SELECT * FROM ov_api_objects
+                   WHERE collection=$1 AND parent_id IS NULL
+                   ORDER BY name""",
+                collection,
             )
             items = [generic_entity(collection, element, r) for r in rows]
             return respond(request, element=element, collection=collection, data=items)
@@ -111,7 +116,10 @@ async def handle_generic(
     if len(parts) == 2:
         oid = parts[1]
         row = await conn.fetchrow(
-            "SELECT * FROM ov_api_objects WHERE id=$1::uuid AND collection=$2", oid, collection
+            """SELECT * FROM ov_api_objects
+               WHERE id=$1::uuid AND collection=$2 AND parent_id IS NULL""",
+            oid,
+            collection,
         )
         if method == "GET":
             if row is None:
@@ -134,7 +142,10 @@ async def handle_generic(
             return respond(request, element=element, data=generic_entity(collection, element, row))
         if method == "DELETE":
             await conn.execute(
-                "DELETE FROM ov_api_objects WHERE id=$1::uuid AND collection=$2", oid, collection
+                """DELETE FROM ov_api_objects
+                   WHERE id=$1::uuid AND collection=$2 AND parent_id IS NULL""",
+                oid,
+                collection,
             )
             return Response(status_code=200)
     if len(parts) == 3 and method == "POST":
@@ -181,20 +192,11 @@ async def handle_subcollection(
     element, _catalog_status = _meta(sub)
     default_status = await option_value(conn, OPT_DEFAULT_API_OBJECT_STATUS)
     collection_key = sub
-    if not rest and method == "GET" and sub == "permissions":
+    if sub == "permissions" and method == "GET":
         object_type = _PARENT_OBJECT_TYPE.get(parent_collection, parent_collection.rstrip("s"))
-        rows = await conn.fetch(
-            """SELECT p.*, r.name AS role_name, u.name AS user_name
-               FROM ov_permissions p
-               JOIN ov_roles r ON r.id = p.role_id
-               LEFT JOIN ov_users u ON u.id = p.user_id
-               WHERE p.object_type=$1 AND p.object_id=$2::uuid
-               ORDER BY r.name""",
-            object_type,
-            parent_id,
-        )
-        items = [
-            {
+
+        def _perm_item(r: Any) -> dict[str, Any]:
+            return {
                 "id": str(r["id"]),
                 "href": f"/ovirt-engine/api/{parent_collection}/{parent_id}/permissions/{r['id']}",
                 "role": {"id": str(r["role_id"]), "name": r["role_name"]},
@@ -205,30 +207,82 @@ async def handle_subcollection(
                     else {}
                 ),
             }
-            for r in rows
-        ]
-        return respond(request, element="permission", collection="permissions", data=items)
-    if not rest and method == "GET" and sub == "tags":
+
+        if not rest:
+            rows = await conn.fetch(
+                """SELECT p.*, r.name AS role_name, u.name AS user_name
+                   FROM ov_permissions p
+                   JOIN ov_roles r ON r.id = p.role_id
+                   LEFT JOIN ov_users u ON u.id = p.user_id
+                   WHERE p.object_type=$1 AND p.object_id=$2::uuid
+                   ORDER BY r.name""",
+                object_type,
+                parent_id,
+            )
+            return respond(
+                request,
+                element="permission",
+                collection="permissions",
+                data=[_perm_item(r) for r in rows],
+            )
+        if len(rest) == 1:
+            r = await conn.fetchrow(
+                """SELECT p.*, r.name AS role_name, u.name AS user_name
+                   FROM ov_permissions p
+                   JOIN ov_roles r ON r.id = p.role_id
+                   LEFT JOIN ov_users u ON u.id = p.user_id
+                   WHERE p.id=$1::uuid AND p.object_type=$2 AND p.object_id=$3::uuid""",
+                rest[0],
+                object_type,
+                parent_id,
+            )
+            if r is None:
+                raise OVirtError("NotFound", "permission not found", status_code=404)
+            return respond(request, element="permission", data=_perm_item(r))
+    if sub == "tags" and method == "GET":
         object_type = _PARENT_OBJECT_TYPE.get(parent_collection, parent_collection.rstrip("s"))
-        rows = await conn.fetch(
-            """SELECT t.*
-               FROM ov_tag_assignments a
-               JOIN ov_tags t ON t.id = a.tag_id
-               WHERE a.object_type=$1 AND a.object_id=$2::uuid
-               ORDER BY t.name""",
-            object_type,
-            parent_id,
-        )
-        items = [
-            {
-                "id": str(r["id"]),
-                "href": f"/ovirt-engine/api/tags/{r['id']}",
-                "name": r["name"],
-                "description": r["description"] or "",
-            }
-            for r in rows
-        ]
-        return respond(request, element="tag", collection="tags", data=items)
+        if not rest:
+            rows = await conn.fetch(
+                """SELECT t.*
+                   FROM ov_tag_assignments a
+                   JOIN ov_tags t ON t.id = a.tag_id
+                   WHERE a.object_type=$1 AND a.object_id=$2::uuid
+                   ORDER BY t.name""",
+                object_type,
+                parent_id,
+            )
+            items = [
+                {
+                    "id": str(r["id"]),
+                    "href": f"/ovirt-engine/api/tags/{r['id']}",
+                    "name": r["name"],
+                    "description": r["description"] or "",
+                }
+                for r in rows
+            ]
+            return respond(request, element="tag", collection="tags", data=items)
+        if len(rest) == 1:
+            r = await conn.fetchrow(
+                """SELECT t.*
+                   FROM ov_tag_assignments a
+                   JOIN ov_tags t ON t.id = a.tag_id
+                   WHERE a.object_type=$1 AND a.object_id=$2::uuid AND t.id=$3::uuid""",
+                object_type,
+                parent_id,
+                rest[0],
+            )
+            if r is None:
+                raise OVirtError("NotFound", "tag not found", status_code=404)
+            return respond(
+                request,
+                element="tag",
+                data={
+                    "id": str(r["id"]),
+                    "href": f"/ovirt-engine/api/tags/{r['id']}",
+                    "name": r["name"],
+                    "description": r["description"] or "",
+                },
+            )
     if not rest:
         if method == "GET":
             rows = await conn.fetch(

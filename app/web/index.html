@@ -584,6 +584,124 @@
       padding-top: 2px;
     }
 
+    .demo-size-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .demo-size-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .demo-size-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 14px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background:
+        linear-gradient(165deg, color-mix(in srgb, var(--brand-accent) 8%, var(--surface-raised)) 0%, var(--surface-raised) 55%);
+      min-height: 168px;
+    }
+
+    .demo-size-card.is-active {
+      border-color: color-mix(in srgb, var(--brand-accent) 55%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 25%, transparent);
+    }
+
+    .demo-size-card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .demo-size-card-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+
+    .demo-size-card-chip {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--brand-accent);
+      background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+      border-radius: 999px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .demo-size-card-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      margin: 0;
+    }
+
+    .demo-size-card-metrics div {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .demo-size-card-metrics dt {
+      margin: 0;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .demo-size-card-metrics dd {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .demo-size-card-note {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .demo-size-card .btn-demo-load {
+      width: 100%;
+      justify-content: center;
+      margin-top: auto;
+    }
+
+    .demo-toolbar {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 8px;
+      align-items: stretch;
+      width: 100%;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .demo-toolbar .btn {
+      flex: 1 1 0;
+      justify-content: center;
+      text-align: center;
+      min-width: 0;
+    }
+
     .btn-demo-load {
       background: var(--brand-accent);
       border-color: var(--brand-accent);
@@ -3420,34 +3538,9 @@
             <span class="value" id="stat-hosts">—</span>
           </div>
         </div>
-        <h4 class="help-section-title">oVirt Engine API pack</h4>
-        <div class="help-stat-grid">
-          <div class="help-stat-card">
-            <span class="label">Series</span>
-            <span class="value" id="stat-os-series">—</span>
-          </div>
-          <div class="help-stat-card">
-            <span class="label">Operations</span>
-            <span class="value" id="stat-os-ops">—</span>
-          </div>
-          <div class="help-stat-card">
-            <span class="label">Services</span>
-            <span class="value" id="stat-os-services">—</span>
-          </div>
-        </div>
-        <label class="field-label" for="os-series-select">Activate series</label>
-        <div class="help-demo-actions" style="margin-top:0.5rem;gap:0.5rem;display:flex;flex-wrap:wrap;align-items:center;">
-          <select id="os-series-select" class="input" style="min-width:10rem;"></select>
-          <button class="btn btn-sm" id="btn-os-series-activate" type="button">Apply pack</button>
-        </div>
-        <label class="field-label" for="os-mv-service" style="margin-top:0.75rem;">Microversion override</label>
-        <div class="help-demo-actions" style="margin-top:0.5rem;gap:0.5rem;display:flex;flex-wrap:wrap;align-items:center;">
-          <select id="os-mv-service" class="input" style="min-width:8rem;"></select>
-          <input id="os-mv-version" class="input" placeholder="e.g. 2.79" style="width:6rem;" />
-          <button class="btn btn-sm" id="btn-os-mv-set" type="button">Set</button>
-          <button class="btn btn-sm" id="btn-os-mv-clear" type="button">Default</button>
-        </div>
-        <p class="help-demo-note" id="os-pack-note" style="margin-top:0.75rem;">Surface-complete contract packs drive schema routes for every API-ref operation.</p>
+        <p class="help-demo-note" style="margin-top:0.75rem;">
+          Engine series packs are switched in <strong>API catalog</strong> → <strong>Apply as runtime</strong>.
+        </p>
       </div>
     </div>
   </aside>
@@ -3866,16 +3959,6 @@
       statStorage: document.getElementById("stat-storage"),
       statHosts: document.getElementById("stat-hosts"),
       statImpl: document.getElementById("stat-impl"),
-      statOsSeries: document.getElementById("stat-os-series"),
-      statOsOps: document.getElementById("stat-os-ops"),
-      statOsServices: document.getElementById("stat-os-services"),
-      osSeriesSelect: document.getElementById("os-series-select"),
-      btnOsSeriesActivate: document.getElementById("btn-os-series-activate"),
-      osMvService: document.getElementById("os-mv-service"),
-      osMvVersion: document.getElementById("os-mv-version"),
-      btnOsMvSet: document.getElementById("btn-os-mv-set"),
-      btnOsMvClear: document.getElementById("btn-os-mv-clear"),
-      osPackNote: document.getElementById("os-pack-note"),
     };
 
     function setText(el, value) {
@@ -4848,6 +4931,15 @@
       if (hasStoredBody) {
         els.body.value = isEmptyRequestBody(storedBody) ? "" : storedBody;
         updateBodyHighlight();
+      } else if (
+        method.body_example
+        && typeof method.body_example === "object"
+        && !Array.isArray(method.body_example)
+        && Object.keys(method.body_example).length > 0
+      ) {
+        // Prefer full Engine-shaped body_example over PARAM field stubs.
+        els.body.value = JSON.stringify(method.body_example, null, 2);
+        updateBodyHighlight();
       } else if (canBuildBody) {
         syncBodyFromFields({ syncVisibility: false });
       } else {
@@ -5198,11 +5290,45 @@
 
     function buildDemoDataHtml(data) {
       const loaded = Boolean(data?.loaded);
+      const profile = data?.profile ?? "minimal";
+      const badgeLabel = loaded ? String(profile) : "Minimal";
+      const sizes = [
+        {
+          id: "small",
+          label: "Small",
+          chip: "lab",
+          hosts: 3,
+          vms: 50,
+          dc: 1,
+          clusters: 1,
+          note: "1 DC · 2 networks · 2 storage · light tags/events",
+        },
+        {
+          id: "large",
+          label: "Large",
+          chip: "default",
+          hosts: 10,
+          vms: 1000,
+          dc: 2,
+          clusters: 2,
+          note: "2 DC · 6 networks · 6 storage · fuller inventory",
+        },
+        {
+          id: "big",
+          label: "Big",
+          chip: "heavy",
+          hosts: 30,
+          vms: 2000,
+          dc: 3,
+          clusters: 6,
+          note: "3 DC · 9 networks · 12 storage · heavy data",
+        },
+      ];
       const stats = [
-        ["Profile", data?.profile ?? "—", loaded ? "ok" : ""],
+        ["Profile", profile, loaded ? "ok" : ""],
         ["VMs", data?.vms ?? "—", ""],
         ["Hosts", data?.hosts ?? "—", ""],
-        ["Data Centers", data?.datacenters ?? "—", ""],
+        ["DC", data?.datacenters ?? "—", ""],
         ["Clusters", data?.clusters ?? "—", ""],
         ["Networks", data?.networks ?? "—", ""],
         ["Disks", data?.disks ?? "—", ""],
@@ -5216,11 +5342,10 @@
         <div class="help-demo-panel">
           <div class="help-report-head help-demo-head">
             <h3>oVirt demo datacenter</h3>
-            <p>Load a synthetic full oVirt inventory into PostgreSQL for client and UI exploration.</p>
-            <span class="help-demo-badge ${loaded ? "loaded" : "empty"}">${loaded ? "Loaded" : "Minimal"}</span>
+            <p>Pick a cluster size — inventory (DC, hosts, VMs, storage, networks, tags, events, jobs) scales together.</p>
+            <span class="help-demo-badge ${loaded ? "loaded" : "empty"}">${escapeHtml(badgeLabel)}</span>
           </div>
           <p class="help-demo-note">
-            ~1000 VMs · 3 Data Centers · 6 Clusters · 24 Hosts · Storage Domains · Networks · Templates · Users/Roles.
             Password for all users: <code>secret</code>. Loading replaces current oVirt state and invalidates active tokens.
           </p>
           <div class="help-stat-grid">
@@ -5231,8 +5356,29 @@
               </div>
             `).join("")}
           </div>
-          <div class="help-demo-actions">
-            <button class="btn btn-sm btn-demo-load" id="btn-demo-load" type="button">Load demo datacenter</button>
+          <div class="demo-size-grid" role="group" aria-label="Cluster sizes">
+            ${sizes.map((s) => {
+              const active = profile === s.id;
+              return `
+              <article class="demo-size-card ${active ? "is-active" : ""}" data-size-card="${s.id}">
+                <div class="demo-size-card-head">
+                  <h4 class="demo-size-card-title">${escapeHtml(s.label)}</h4>
+                  <span class="demo-size-card-chip">${escapeHtml(s.chip)}</span>
+                </div>
+                <dl class="demo-size-card-metrics">
+                  <div><dt>Hosts</dt><dd>${s.hosts}</dd></div>
+                  <div><dt>VMs</dt><dd>${s.vms}</dd></div>
+                  <div><dt>DC</dt><dd>${s.dc}</dd></div>
+                  <div><dt>Clusters</dt><dd>${s.clusters}</dd></div>
+                </dl>
+                <p class="demo-size-card-note">${escapeHtml(s.note)}</p>
+                <button class="btn btn-sm btn-demo-load" data-demo-size="${s.id}" type="button">
+                  Load ${escapeHtml(s.label.toLowerCase())}
+                </button>
+              </article>`;
+            }).join("")}
+          </div>
+          <div class="demo-toolbar">
             <button class="btn btn-sm btn-demo-unload" id="btn-demo-unload" type="button">Reset to minimal</button>
             <button class="btn btn-sm" id="btn-demo-refresh" type="button">Refresh stats</button>
           </div>
@@ -5271,12 +5417,12 @@
       renderDemoState(await res.json());
     }
 
-    async function loadDemoData() {
-      const loadBtn = document.getElementById("btn-demo-load");
-      if (loadBtn) loadBtn.disabled = true;
+    async function loadDemoData(size = "large") {
+      const loadBtns = document.querySelectorAll("[data-demo-size]");
+      loadBtns.forEach((btn) => { btn.disabled = true; });
       setLoading(true);
       try {
-        const res = await fetch("/ui/api/demo/load", { method: "POST" });
+        const res = await fetch(`/ui/api/demo/load?size=${encodeURIComponent(size)}`, { method: "POST" });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
           const detail = Array.isArray(body.detail)
@@ -5293,20 +5439,24 @@
           persistAuth();
         }
         await refreshOverview();
-        toast("oVirt demo datacenter loaded (~1000 VMs)", "ok");
+        const seed = body.seed || body.summary || {};
+        toast(
+          `Cluster ${seed.profile || size} loaded (${seed.hosts ?? "?"} hosts · ${seed.vms ?? "?"} VMs)`,
+          "ok",
+        );
         toast("Sign in again (admin@internal / secret) — tokens were reset with the seed", "warn");
       } finally {
-        if (loadBtn) loadBtn.disabled = false;
+        loadBtns.forEach((btn) => { btn.disabled = false; });
         setLoading(false);
       }
     }
 
     async function unloadDemoData() {
       const confirmed = await showConfirm({
-        title: "Remove demo data?",
-        message: "This wipes simulator DB state (demo data and anything created via the API), then reloads a minimal cluster.",
-        confirmLabel: "Remove demo data",
-        cancelLabel: "Keep demo data",
+        title: "Reset to minimal?",
+        message: "This wipes current simulator DB state (sized demo and anything created via the API), then loads the minimal cluster (1 host · 1 VM).",
+        confirmLabel: "Reset to minimal",
+        cancelLabel: "Keep current data",
         tone: "danger",
       });
       if (!confirmed) return;
@@ -5327,7 +5477,7 @@
           persistAuth();
         }
         await refreshOverview();
-        toast("Demo data removed — sign in again if needed", "info");
+        toast("Minimal cluster loaded — sign in again if needed", "info");
       } finally {
         if (unloadBtn) unloadBtn.disabled = false;
         setLoading(false);
@@ -5704,14 +5854,18 @@
       if (!els.dataPanel || els.dataPanel.dataset.demoBound) return;
       els.dataPanel.dataset.demoBound = "1";
       els.dataPanel.addEventListener("click", (event) => {
-        const target = event.target.closest("#btn-demo-load, #btn-demo-unload, #btn-demo-refresh");
-        if (!target) return;
-        if (target.id === "btn-demo-load") {
-          loadDemoData().catch((error) => {
+        const loadBtn = event.target.closest("[data-demo-size]");
+        if (loadBtn) {
+          const size = loadBtn.getAttribute("data-demo-size") || "large";
+          loadDemoData(size).catch((error) => {
             showError(String(error));
             toast("Failed to load demo data", "error");
           });
-        } else if (target.id === "btn-demo-unload") {
+          return;
+        }
+        const target = event.target.closest("#btn-demo-unload, #btn-demo-refresh");
+        if (!target) return;
+        if (target.id === "btn-demo-unload") {
           unloadDemoData().catch((error) => {
             showError(String(error));
             toast("Failed to remove demo data", "error");
@@ -6421,9 +6575,11 @@
           try {
             const parsed = JSON.parse(body || "{}");
             if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              const { inner } = unwrapBodyExample(parsed);
               for (const field of bodyFields) {
-                if (Object.prototype.hasOwnProperty.call(parsed, field.name)) {
-                  state.bodyValues[field.name] = String(parsed[field.name] ?? "");
+                const value = getByPath(inner, field.name);
+                if (value !== undefined && value !== null) {
+                  state.bodyValues[field.name] = String(value);
                 }
               }
             }
@@ -6496,31 +6652,95 @@
       return target === "cluster" ? buildClusterUrl(apiPath) : buildEmulatorUrl(apiPath);
     }
 
+    function deepCloneJson(value) {
+      if (value == null) return value;
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function getByPath(root, path) {
+      if (!path) return root;
+      const parts = String(path).split(".");
+      let cur = root;
+      for (const part of parts) {
+        if (cur == null || typeof cur !== "object") return undefined;
+        cur = cur[part];
+      }
+      return cur;
+    }
+
+    function setByPath(root, path, value) {
+      const parts = String(path).split(".");
+      let cur = root;
+      for (let i = 0; i < parts.length - 1; i += 1) {
+        const part = parts[i];
+        const next = parts[i + 1];
+        const wantArray = /^\d+$/.test(next);
+        if (cur[part] == null || typeof cur[part] !== "object") {
+          cur[part] = wantArray ? [] : {};
+        }
+        cur = cur[part];
+      }
+      cur[parts[parts.length - 1]] = value;
+    }
+
+    function deleteByPath(root, path) {
+      const parts = String(path).split(".");
+      let cur = root;
+      for (let i = 0; i < parts.length - 1; i += 1) {
+        if (cur == null || typeof cur !== "object") return;
+        cur = cur[parts[i]];
+      }
+      if (cur && typeof cur === "object") delete cur[parts[parts.length - 1]];
+    }
+
+    function unwrapBodyExample(example) {
+      if (!example || typeof example !== "object" || Array.isArray(example)) {
+        return { wrapKey: null, inner: {} };
+      }
+      const keys = Object.keys(example);
+      if (
+        keys.length === 1
+        && example[keys[0]]
+        && typeof example[keys[0]] === "object"
+        && !Array.isArray(example[keys[0]])
+      ) {
+        return { wrapKey: keys[0], inner: example[keys[0]] };
+      }
+      return { wrapKey: null, inner: example };
+    }
+
     function syncBodyFromFields({ syncVisibility = true } = {}) {
       if (!state.method) return;
       const inputs = [...(els.bodyFields?.querySelectorAll("input[data-field]") || [])];
-      const body = {};
+      const example = state.method.body_example;
+      const { wrapKey, inner } = unwrapBodyExample(example);
+      const root = deepCloneJson(inner) || {};
+      let touched = false;
       inputs.forEach((input) => {
         const name = input.dataset.field;
+        if (!name) return;
         const raw = input.value.trim();
-        if (!raw) return;
-        if (raw === "true" || raw === "false") body[name] = raw === "true";
-        else if (/^-?\d+$/.test(raw)) body[name] = Number(raw);
-        else if (/^-?\d+\.\d+$/.test(raw)) body[name] = Number(raw);
-        else body[name] = raw;
-      });
-      // If PARAM fields are empty, fall back to method body_example so the editor
-      // updates when switching verbs / endpoints.
-      if (!Object.keys(body).length) {
-        const example = state.method.body_example;
-        if (example && typeof example === "object" && !Array.isArray(example)) {
-          for (const [key, value] of Object.entries(example)) {
-            if (value === undefined || value === null || value === "") continue;
-            body[key] = value;
-          }
+        const existing = getByPath(root, name);
+        if (!raw && existing === undefined) return;
+        touched = true;
+        if (!raw) {
+          deleteByPath(root, name);
+          return;
         }
+        let value = raw;
+        if (raw === "true" || raw === "false") value = raw === "true";
+        else if (/^-?\d+$/.test(raw)) value = Number(raw);
+        else if (/^-?\d+\.\d+$/.test(raw)) value = Number(raw);
+        setByPath(root, name, value);
+      });
+      // Empty PARAM inputs → keep full body_example; edits merge into the Engine root wrap.
+      if (!touched && example && typeof example === "object" && !Array.isArray(example)) {
+        els.body.value = Object.keys(example).length ? JSON.stringify(example, null, 2) : "";
+        updateBodyHighlight();
+        if (syncVisibility) updateBodyPaneVisibility(state.method);
+        return;
       }
-      // Keep empty object out of the editor — do not show `{}`.
+      const body = wrapKey ? { [wrapKey]: root } : root;
       els.body.value = Object.keys(body).length ? JSON.stringify(body, null, 2) : "";
       updateBodyHighlight();
       if (syncVisibility) {
@@ -6748,7 +6968,6 @@
         await loadVersions();
         await loadCatalog({ major, preserveSelection: true, silent: true });
         await refreshOverview();
-        await refreshoVirtPack();
         toast(`Runtime switched to ${state.runtimeVersion || seriesLabel(major)}`, "ok");
       } finally {
         setLoading(false);
@@ -6770,84 +6989,6 @@
       applyMethodDetails(payload);
     }
 
-    async function refreshoVirtPack() {
-      try {
-        const res = await fetch("/ui/api/ovirt/contracts");
-        if (!res.ok) return;
-        const data = await res.json();
-        const active = data.active || {};
-        setText(els.statOsSeries, active.series || "—");
-        setText(els.statOsOps, String(active.operation_count ?? data.schema_ops_mounted ?? "—"));
-        setText(els.statOsServices, String(active.service_count ?? "—"));
-        if (els.osSeriesSelect) {
-          const available = data.available || [];
-          els.osSeriesSelect.innerHTML = available.map((s) =>
-            `<option value="${escapeHtml(s.series)}" ${s.series === active.series ? "selected" : ""}>${escapeHtml(s.series)} (${s.operation_count} ops)</option>`
-          ).join("");
-        }
-        if (els.osMvService) {
-          const services = (active.services || []).filter((s) => s.max_microversion);
-          els.osMvService.innerHTML = services.map((s) =>
-            `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)} ${escapeHtml(s.active_microversion || s.default_microversion || "")}</option>`
-          ).join("");
-        }
-        if (els.osPackNote) {
-          els.osPackNote.textContent = `Pack ${active.series || "—"} · ${active.operation_count || 0} operations · checksum ${(active.checksum || "").slice(0, 12)}…`;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    function bindoVirtPackActions() {
-      els.btnOsSeriesActivate?.addEventListener("click", async () => {
-        const series = els.osSeriesSelect?.value;
-        if (!series) return;
-        const res = await fetch("/ui/api/ovirt/contracts/activate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ series }),
-        });
-        const payload = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          toast(payload.detail || `Activate failed: ${res.status}`, "error");
-          return;
-        }
-        toast(`oVirt pack: ${payload.series} (${payload.operation_count} ops)`, "ok");
-        await refreshoVirtPack();
-      });
-      els.btnOsMvSet?.addEventListener("click", async () => {
-        const service = els.osMvService?.value;
-        const version = els.osMvVersion?.value?.trim();
-        if (!service || !version) {
-          toast("Pick a service and microversion", "warn");
-          return;
-        }
-        const res = await fetch("/ui/api/ovirt/microversions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ service, version }),
-        });
-        if (!res.ok) {
-          toast(`Microversion set failed: ${res.status}`, "error");
-          return;
-        }
-        toast(`${service} → ${version}`, "ok");
-        await refreshoVirtPack();
-      });
-      els.btnOsMvClear?.addEventListener("click", async () => {
-        const service = els.osMvService?.value;
-        if (!service) return;
-        await fetch("/ui/api/ovirt/microversions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ service, version: "default" }),
-        });
-        toast(`${service} microversion reset`, "ok");
-        await refreshoVirtPack();
-      });
-    }
-
     async function refreshOverview() {
       try {
         setText(
@@ -6856,7 +6997,6 @@
         );
         await refreshClusterStats();
         await refreshCatalogCoverage();
-        await refreshoVirtPack();
       } catch (e) { console.error(e); }
     }
 
@@ -7142,7 +7282,6 @@
     bindCatalogOptions();
     bindHelpNav();
     bindDataPanelActions();
-    bindoVirtPackActions();
     bindModal();
     bindTooltips();
     bindEndpointTree();

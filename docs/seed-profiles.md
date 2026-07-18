@@ -4,12 +4,16 @@
 
 | Profile | How to load | Contents |
 |---|---|---|
-| `minimal` | Simulator startup (if DB is not already `demo`) / `make seed` / `python -m app.ovirt.seed_cli --profile minimal` / Helm seed Job | 1 datacenter, 1 cluster, 1 host, Blank template, 4 users, small inventory sample |
-| `demo` | `make seed-demo` / UI Data drawer / Helm `seed.profile=demo` / `--profile demo` | ~1000 VMs, multi-host DC, networks, storage domains, disks, nested samples |
+| `minimal` | Startup (if DB is not a sized demo) / `make seed` / `--profile minimal` | 1 DC, 1 cluster, 1 host, Blank template, 4 users |
+| `small` | `make seed-small` / DATA → **Load small** / `--profile small` | **3 hosts · 50 VMs** · 1 DC · 1 cluster · 2 networks · 2 SD |
+| `large` | `make seed-large` / DATA → **Load large** / `--profile large` | **10 hosts · 1000 VMs** · 2 DC · 2 clusters · proportional inventory |
+| `big` | `make seed-big` / DATA → **Load big** / `--profile big` | **30 hosts · 2000 VMs** · 3 DC · 6 clusters · denser tags/events/jobs |
+| `demo` | `make seed-demo` (alias) / `--profile demo` | Same as **`large`** (legacy name) |
 
-On Compose, the FastAPI lifespan loads **`minimal`** automatically when the DB
-is empty or not marked as `demo`. Use `make seed-demo` (or the UI Data drawer)
-for the large profile. Helm can also run a seed Job (`seed.enabled`).
+Sized demos scale datacenters, clusters, hosts, VMs, networks, storage domains,
+templates, tags, events, jobs, and nested samples together. On Compose, lifespan
+keeps any of `small` / `large` / `big` / `demo` across restarts (does not wipe to
+minimal).
 
 Password for all users: **`secret`**. Domain: **`internal`**.
 
@@ -20,22 +24,30 @@ Principals: `admin@internal`, `ops@internal`, `developer@internal`,
 
 ```bash
 make seed
-make seed-demo
+make seed-small
+make seed-large   # or: make seed-demo
+make seed-big
 
-# equivalent
 docker compose run --rm --entrypoint python simulator \
-  -m app.ovirt.seed_cli --profile demo
+  -m app.ovirt.seed_cli --profile large
 ```
+
+## UI
+
+Open the **DATA** drawer → **Load small** / **Load large** / **Load big**, or
+**Reset to minimal**.
+
+API: `POST /ui/api/demo/load?size=small|large|big`
 
 ## Helm
 
 ```yaml
 seed:
   enabled: true
-  profile: demo   # or minimal
+  profile: large   # minimal | small | large | big | demo
 ```
 
 ## Behaviour
 
-Both profiles **truncate** oVirt lab tables then reload. Prefer `demo` for
-density and nested GET probes; `minimal` for fast CI.
+All profiles **truncate** oVirt lab tables then reload. Prefer `large`/`big` for
+density; `minimal` / `small` for fast CI and light labs.

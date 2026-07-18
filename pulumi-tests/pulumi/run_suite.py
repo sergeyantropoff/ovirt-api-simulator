@@ -52,6 +52,7 @@ def main() -> int:
                 "passed": totals["passed"],
                 "failed": totals["failed"],
                 "skipped": totals["skipped"],
+                "coverage": payload.get("coverage"),
                 "methods": methods,
                 "series": series_names,
                 "report_json": str(json_path),
@@ -86,7 +87,12 @@ def main() -> int:
     failed = int(outputs.get("failed") or totals["failed"])
     total = int(outputs.get("total") or totals["total"])
     passed = int(outputs.get("passed") or totals["passed"])
+    coverage = payload.get("coverage") or {}
+    declared = int(coverage.get("declared") or total)
+    probed = int(coverage.get("probed") or (passed + failed + int(totals.get("skipped") or 0)))
+    critical = int(coverage.get("critical") or failed)
     print(f"SUMMARY total={total} passed={passed} failed={failed}", flush=True)
+    print(f"COVERAGE {probed}/{declared} (critical={critical})", flush=True)
     print(f"METHODS {json.dumps(methods, sort_keys=True)}", flush=True)
     print(f"HTML report: {html_path}", flush=True)
 
@@ -94,7 +100,9 @@ def main() -> int:
     missing_methods = sorted(_FULL_RUN_METHODS - set(methods)) if full_run else []
     if missing_methods:
         print(f"MISSING METHODS on full run: {', '.join(missing_methods)}", flush=True)
-    if failed or missing_methods:
+    if probed != declared:
+        print(f"COVERAGE MISMATCH probed={probed} declared={declared}", flush=True)
+    if failed or missing_methods or critical or probed != declared:
         return 1
     return 0
 

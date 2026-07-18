@@ -42,7 +42,7 @@ def _value_empty(value: Any) -> bool:
     return value is None or value == "" or value == [] or value == {}
 
 
-def _payload_nonempty(response: Any, *, method: str) -> tuple[bool, str]:
+def _payload_nonempty(response: Any, *, method: str, kind: str = "") -> tuple[bool, str]:
     """Require non-empty response data for successful body-bearing statuses."""
     # HEAD has no body; DELETE often returns 200 with an empty body (Engine-style).
     if method in {"HEAD", "DELETE"}:
@@ -61,10 +61,17 @@ def _payload_nonempty(response: Any, *, method: str) -> tuple[bool, str]:
         return False, "null JSON body"
     if isinstance(data, (list, dict)) and len(data) == 0:
         return False, "empty JSON body"
+    # Declared collection GETs must return durable lab samples (not []).
+    if method == "GET" and kind == "collection" and isinstance(data, dict):
+        for value in data.values():
+            if isinstance(value, list):
+                if len(value) == 0:
+                    return False, "empty collection list"
+                first = value[0]
+                if isinstance(first, dict) and not first.get("id"):
+                    return False, "collection item missing id"
+                break
     if isinstance(data, dict) and all(_value_empty(v) for v in data.values()):
-        # Allow Engine empty collections: {"vms": []} has structure but no rows.
-        if len(data) == 1 and isinstance(next(iter(data.values())), list):
-            return True, ""
         return False, "JSON body has only empty fields"
     return True, ""
 
@@ -146,7 +153,47 @@ def synthesize_head_ops(ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 class Inventory:
-    """Cache of collection → first entity id for path placeholder expansion."""
+    """Cache of collection → entity ids for path placeholder expansion.
+
+    PUT/DELETE resolve to *disposable* entities created for the op so the
+    minimal seed (lab-vm-01, Default DC/cluster, …) is not wiped before later
+    collection GETs run in contract order.
+    """
+
+    _ELEMENT = {
+        "vms": "vm",
+        "hosts": "host",
+        "clusters": "cluster",
+        "datacenters": "data_center",
+        "networks": "network",
+        "disks": "disk",
+        "templates": "template",
+        "storagedomains": "storage_domain",
+        "storageconnections": "storage_connection",
+        "vnicprofiles": "vnic_profile",
+        "users": "user",
+        "groups": "group",
+        "roles": "role",
+        "tags": "tag",
+        "bookmarks": "bookmark",
+        "affinitylabels": "affinity_label",
+        "instancetypes": "instance_type",
+        "macpools": "mac_pool",
+        "schedulingpolicies": "scheduling_policy",
+        "vmpools": "vm_pool",
+        "permissions": "permission",
+        "domains": "domain",
+        "icons": "icon",
+        "jobs": "job",
+        "events": "event",
+        "nics": "nic",
+        "snapshots": "snapshot",
+        "diskattachments": "disk_attachment",
+        "cdroms": "cdrom",
+        "graphicsconsoles": "graphics_console",
+        "quotas": "quota",
+        "affinitygroups": "affinity_group",
+    }
 
     def __init__(self, client: OVirtClient, version: str) -> None:
         self.client = client
@@ -154,8 +201,12 @@ class Inventory:
         self._ids: dict[str, str] = {}
         self._listed: set[str] = set()
 
-    def id_for(self, collection: str) -> str | None:
+    def id_for(self, collection: str, *, method: str = "GET") -> str | None:
         collection = collection.strip("/")
+        if method in {"DELETE", "PUT"}:
+            created = self.create_disposable(collection)
+            if created:
+                return created
         if collection in self._ids:
             return self._ids[collection]
         if collection in self._listed:
@@ -172,7 +223,6 @@ class Inventory:
             body = r.json()
         except Exception:
             return None
-        # Engine collections are usually { "<singular_or_plural>": [ {...}, ... ] }
         for value in body.values() if isinstance(body, dict) else []:
             if isinstance(value, list) and value:
                 first = value[0]
@@ -182,6 +232,129 @@ class Inventory:
             if isinstance(value, dict) and value.get("id"):
                 self._ids[collection] = str(value["id"])
                 return self._ids[collection]
+        return None
+
+    def create_disposable(self, collection: str) -> str | None:
+        """POST a throwaway entity and return its id (best-effort)."""
+
+        element = self._ELEMENT.get(collection) or collection.rstrip("s") or "object"
+        name = f"pulumi-{uuid4().hex[:8]}"
+        payload: dict[str, Any] = {
+            "name": name,
+            "description": "pulumi disposable",
+        }
+        if collection == "clusters":
+            dc = self.id_for("datacenters", method="GET")
+            if dc:
+                payload["data_center"] = {"id": dc}
+        elif collection == "hosts":
+            cl = self.id_for("clusters", method="GET")
+            if cl:
+                payload["cluster"] = {"id": cl}
+            payload["address"] = "127.0.0.1"
+        elif collection == "networks":
+            dc = self.id_for("datacenters", method="GET")
+            if dc:
+                payload["data_center"] = {"id": dc}
+        elif collection == "vms":
+            cl = self.id_for("clusters", method="GET")
+            if cl:
+                payload["cluster"] = {"id": cl}
+            tpl = self.id_for("templates", method="GET")
+            if tpl:
+                payload["template"] = {"id": tpl}
+        elif collection == "disks":
+            sd = self.id_for("storagedomains", method="GET")
+            if sd:
+                payload["storage_domains"] = {"storage_domain": [{"id": sd}]}
+            payload["provisioned_size"] = 1073741824
+        elif collection == "vnicprofiles":
+            net = self.id_for("networks", method="GET")
+            if net:
+                payload["network"] = {"id": net}
+        elif collection == "templates":
+            cl = self.id_for("clusters", method="GET")
+            if cl:
+                payload["cluster"] = {"id": cl}
+        elif collection == "storageconnections":
+            payload = {
+                "type": "nfs",
+                "address": "nfs.pulumi.local",
+                "path": f"/export/{name}",
+            }
+        elif collection == "storagedomains":
+            payload["type"] = "data"
+            payload["storage"] = {
+                "type": "nfs",
+                "address": "nfs.pulumi.local",
+                "path": f"/export/{name}",
+            }
+        elif collection == "users":
+            payload = {
+                "user_name": f"{name}@internal",
+                "name": name,
+                "password": "secret",
+            }
+            domain = self.id_for("domains", method="GET")
+            if domain:
+                payload["domain"] = {"id": domain}
+        elif collection == "bookmarks":
+            payload["value"] = "Vms:"
+
+        path = f"/ovirt-engine/api/{collection}"
+        return self._post_for_id(path, element, payload)
+
+    def create_disposable_at(self, collection_path: str, collection: str) -> str | None:
+        """POST under an already-resolved collection path (nested resources)."""
+
+        element = self._ELEMENT.get(collection) or collection.rstrip("s") or "object"
+        name = f"pulumi-{uuid4().hex[:8]}"
+        payload: dict[str, Any] = {"name": name, "description": "pulumi disposable"}
+        if collection == "snapshots":
+            payload = {"description": name}
+        elif collection == "diskattachments":
+            payload = {
+                "interface": "virtio_scsi",
+                "bootable": False,
+                "active": True,
+                "disk": {
+                    "name": f"{name}-disk",
+                    "provisioned_size": 1073741824,
+                    "format": "cow",
+                },
+            }
+        elif collection == "cdroms":
+            payload = {"file": {"id": ""}}
+        elif collection == "graphicsconsoles":
+            payload = {"protocol": "spice"}
+        elif collection == "nics":
+            payload = {"name": name, "interface": "virtio"}
+        return self._post_for_id(collection_path, element, payload)
+
+    def _post_for_id(
+        self, path: str, element: str, payload: dict[str, Any]
+    ) -> str | None:
+        try:
+            r = self.client.request(
+                "POST",
+                path,
+                headers=self.client.headers(version=self.version),
+                json={element: payload},
+            )
+        except Exception:
+            return None
+        if r.status_code not in {200, 201, 202}:
+            return None
+        try:
+            body = r.json()
+        except Exception:
+            return None
+        entity = body.get(element) if isinstance(body, dict) else None
+        if isinstance(entity, dict) and entity.get("id"):
+            return str(entity["id"])
+        for value in body.values() if isinstance(body, dict) else []:
+            if isinstance(value, dict) and value.get("id"):
+                return str(value["id"])
         return None
 
 
@@ -195,10 +368,11 @@ def _collection_before_param(parts: list[str], index: int) -> str | None:
     return prev
 
 
-def resolve_path(template: str, inventory: Inventory) -> tuple[str, bool]:
+def resolve_path(template: str, inventory: Inventory, *, method: str = "GET") -> tuple[str, bool]:
     """Return resolved path and whether every placeholder was satisfied from inventory."""
 
     parts = template.strip("/").split("/")
+    param_indices = [i for i, part in enumerate(parts) if _PATH_PARAM.fullmatch(part)]
     resolved: list[str] = []
     complete = True
     for i, part in enumerate(parts):
@@ -207,7 +381,29 @@ def resolve_path(template: str, inventory: Inventory) -> tuple[str, bool]:
             resolved.append(part)
             continue
         collection = _collection_before_param(parts, i)
-        entity_id = inventory.id_for(collection) if collection else None
+        is_leaf = bool(param_indices) and i == param_indices[-1]
+        entity_id = None
+        if collection:
+            if method in {"DELETE", "PUT"} and is_leaf:
+                # Only the leaf id is disposable — parents keep seed inventory.
+                # Never fall back to seed ids for DELETE (would wipe minimal lab).
+                if collection in Inventory._ELEMENT and collection not in {
+                    "nics",
+                    "snapshots",
+                    "diskattachments",
+                    "cdroms",
+                    "graphicsconsoles",
+                    "quotas",
+                    "affinitygroups",
+                }:
+                    entity_id = inventory.create_disposable(collection)
+                else:
+                    parent_path = "/" + "/".join(resolved)
+                    entity_id = inventory.create_disposable_at(parent_path, collection)
+                if not entity_id and method == "PUT":
+                    entity_id = inventory.id_for(collection, method="GET")
+            else:
+                entity_id = inventory.id_for(collection, method="GET")
         if entity_id:
             resolved.append(entity_id)
         else:
@@ -242,7 +438,7 @@ def execute_operation(
     expected = int(op.get("create_status") or op.get("status_code") or 200) if method == "POST" else int(
         op.get("status_code") or 200
     )
-    path, _complete = resolve_path(template, inventory)
+    path, _complete = resolve_path(template, inventory, method=method)
     body = _minimal_body(op)
     started = time.perf_counter()
     try:
@@ -254,7 +450,9 @@ def execute_operation(
         ok = response.status_code in _PASS_STATUSES
         detail = ""
         if ok:
-            body_ok, body_detail = _payload_nonempty(response, method=method)
+            body_ok, body_detail = _payload_nonempty(
+                response, method=method, kind=kind
+            )
             if not body_ok:
                 ok = False
                 detail = body_detail
@@ -400,11 +598,32 @@ def run_coverage(cfg: SuiteConfig) -> CoverageReport:
 
 
 def report_to_dict(report: CoverageReport) -> dict[str, Any]:
+    totals = report.totals
+    declared = totals["total"]
+    probed = totals["passed"] + totals["failed"] + totals["skipped"]
+    critical = totals["failed"]
+    series_coverage = []
+    for s in report.series:
+        series_coverage.append(
+            {
+                "series": s.series,
+                "declared": s.total,
+                "probed": s.passed + s.failed + s.skipped,
+                "critical": s.failed,
+            }
+        )
     return {
         "generated_at": report.generated_at,
         "engine_url": report.engine_url,
-        "totals": report.totals,
+        "totals": totals,
         "methods": report.methods,
+        "coverage": {
+            "declared": declared,
+            "probed": probed,
+            "critical": critical,
+            "line": f"{probed}/{declared}",
+            "series": series_coverage,
+        },
         "series": [asdict(s) for s in report.series],
         "results": [asdict(r) for r in report.results],
     }

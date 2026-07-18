@@ -18,7 +18,7 @@ Semantic handlers persist mutations; long-running work is tracked as Engine jobs
 ```bash
 cp .env.example .env
 make up
-make seed          # or: make seed-demo  (~1000 VMs)
+make seed          # or: make seed-small|seed-large|seed-big
 ```
 
 | Surface | URL |
@@ -73,7 +73,7 @@ Or: `make release-up && make release-seed PROFILE=minimal`
 - XML + JSON representations (`Accept` / `Content-Type`)
 - Series packs **3.0–3.6, 4.3–4.5, master** with operation deltas
 - Stateful PostgreSQL inventory + async jobs
-- Seed profiles: `minimal` and `demo` (~1000 VMs)
+- Seed profiles: `minimal`, `small` (3h/50vm), `large` (10h/1000vm), `big` (30h/2000vm)
 - Web UI with oVirt branding (`#0076B6` / charcoal `#1D2226`)
 - Docker Compose + Helm
 - API tests + [`pulumi-tests/`](pulumi-tests/README.md) (Pulumi contract coverage)
@@ -82,14 +82,18 @@ Or: `make release-up && make release-seed PROFILE=minimal`
 
 ```bash
 make up
+make up-local            # local ports via gitignored docker-compose.override.yml
+make down-local          # stop stack + remove local override
 make seed
-make seed-demo
+make seed-large
 make test-unit
 make test-integration
 make test-pulumi-smoke   # Pulumi smoke
 make test-pulumi         # all series × all contract ops + HTML report
 make pulumi-tests        # alias for test-pulumi
 make test-all            # alias for test-pulumi
+make push                # git add . → prompt commit → push origin + antropoff
+# make push MSG="your message"   # non-interactive commit message
 ```
 
 Docker Hub release (requires `docker login` as the Hub owner; see
@@ -111,7 +115,7 @@ make release-up && make release-seed  # run the published stack locally
 | [Authentication](docs/authentication.md) | Basic, OAuth2, sessions |
 | [API versions](docs/api-versions.md) | Series packs and Version header |
 | [Configuration](docs/configuration.md) | Environment and Compose |
-| [Seed profiles](docs/seed-profiles.md) | `minimal` / `demo` |
+| [Seed profiles](docs/seed-profiles.md) | `minimal` / `small` / `large` / `big` |
 | [Kubernetes / Helm](docs/kubernetes.md) | Cluster install |
 | [Full index](docs/README.md) | All guides |
 

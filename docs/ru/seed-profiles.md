@@ -4,38 +4,38 @@
 
 | Профиль | Как загрузить | Содержимое |
 |---|---|---|
-| `minimal` | Startup симулятора (если БД ещё не `demo`) / `make seed` / `python -m app.ovirt.seed_cli --profile minimal` / Helm seed Job | 1 datacenter, 1 cluster, 1 host, Blank template, 4 пользователя, небольшой sample инвентаря |
-| `demo` | `make seed-demo` / ящик Data в UI / Helm `seed.profile=demo` / `--profile demo` | ~1000 ВМ, multi-host DC, сети, storage domains, диски, nested samples |
+| `minimal` | Старт (если БД не sized-demo) / `make seed` / `--profile minimal` | 1 DC, 1 cluster, 1 host, Blank, 4 пользователя |
+| `small` | `make seed-small` / DATA → **Load small** / `--profile small` | **3 host · 50 ВМ** · 1 DC · 1 cluster · 2 сети · 2 SD |
+| `large` | `make seed-large` / DATA → **Load large** / `--profile large` | **10 host · 1000 ВМ** · 2 DC · 2 cluster · пропорциональный инвентарь |
+| `big` | `make seed-big` / DATA → **Load big** / `--profile big` | **30 host · 2000 ВМ** · 3 DC · 6 cluster · больше tags/events/jobs |
+| `demo` | `make seed-demo` (alias) / `--profile demo` | То же, что **`large`** (старое имя) |
 
-В Compose lifespan FastAPI загружает **`minimal`**, если БД пуста или не
-помечена как `demo`. Для большого профиля — `make seed-demo` (или ящик Data в
-UI). Helm дополнительно может запускать seed Job (`seed.enabled`).
+Sized-demo масштабируют DC, clusters, hosts, VMs, сети, storage domains,
+templates, tags, events, jobs и nested samples вместе. Lifespan сохраняет
+`small` / `large` / `big` / `demo` при рестарте.
 
-Пароль для всех пользователей: **`secret`**. Домен: **`internal`**.
-
-Principals: `admin@internal`, `ops@internal`, `developer@internal`,
-`demo@internal`.
+Пароль всех пользователей: **`secret`**. Домен: **`internal`**.
 
 ## CLI
 
 ```bash
 make seed
-make seed-demo
-
-# эквивалент
-docker compose run --rm --entrypoint python simulator \
-  -m app.ovirt.seed_cli --profile demo
+make seed-small
+make seed-large   # или: make seed-demo
+make seed-big
 ```
+
+## UI
+
+Ящик **DATA** → **Load small** / **Load large** / **Load big**, либо
+**Reset to minimal**.
+
+API: `POST /ui/api/demo/load?size=small|large|big`
 
 ## Helm
 
 ```yaml
 seed:
   enabled: true
-  profile: demo   # или minimal
+  profile: large   # minimal | small | large | big | demo
 ```
-
-## Поведение
-
-Оба профиля **очищают** (truncate) лабораторные таблицы oVirt и загружают данные
-заново. `demo` — для плотности и nested GET; `minimal` — для быстрого CI.

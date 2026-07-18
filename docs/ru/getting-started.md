@@ -66,6 +66,9 @@ curl -skf https://127.0.0.1/health/ready
 curl -sf http://127.0.0.1:5000/health/live
 ```
 
+Консоль: [http://127.0.0.1:5000/](http://127.0.0.1:5000/) — скриншоты Try-it,
+каталога и ящиков Data см. в [Web UI](web-ui.md).
+
 `/health/ready` возвращает HTTP 503, пока PostgreSQL недоступен **или** не
 применена последняя упакованная миграция.
 

@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.db.pool import AsyncpgDatabase
 from app.dependencies import get_database
-from app.ovirt.demo_datacenter import seed_ovirt_demo
+from app.ovirt.demo_datacenter import CLUSTER_SIZES, normalize_cluster_size, seed_ovirt_demo
 from app.ovirt.seed import clear_ovirt_state, ovirt_demo_summary, seed_ovirt
 from app.web.assets import console_html
 
@@ -175,13 +175,29 @@ async def ui_ovirt_contracts_activate(request: Request) -> JSONResponse:
 
 @router.post("/ui/api/demo/load", include_in_schema=False)
 async def ui_demo_load(request: Request) -> JSONResponse:
-    """Load synthetic oVirt datacenter (~1000 VMs + full inventory)."""
+    """Load a sized demo cluster: small (3h/50vm), large (10h/1000vm), big (30h/2000vm)."""
+
+    size_raw = request.query_params.get("size") or request.query_params.get("profile")
+    if size_raw is None:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if isinstance(body, dict):
+            size_raw = body.get("size") or body.get("profile")
+    try:
+        size = normalize_cluster_size(str(size_raw) if size_raw else "large")
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{error}; sizes: {', '.join(sorted(CLUSTER_SIZES))}",
+        ) from error
 
     pool = _database_pool(request)
     try:
         async with pool.acquire() as connection:
             async with connection.transaction():
-                result = await seed_ovirt_demo(connection)
+                result = await seed_ovirt_demo(connection, size=size)
             summary = await ovirt_demo_summary(connection)
     except Exception as error:
         raise HTTPException(

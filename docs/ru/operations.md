@@ -46,7 +46,7 @@ make seed-demo
 OVIRT_SERIES=4.4 make restart
 ```
 
-**Hot-swap** (in-memory, без пересборки) — Web UI Environment → Apply pack, или:
+**Hot-swap** (in-memory, без пересборки) — Web UI **API catalog** → **Apply as runtime**, или:
 
 ```bash
 curl -s http://127.0.0.1:5000/ui/api/ovirt/contracts/activate \

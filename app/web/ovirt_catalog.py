@@ -11,30 +11,42 @@ from app.ovirt.contract_loader import (
     load_series_pack,
     series_for_major,
 )
+from app.ovirt.ids import stable_id
+from app.web.ovirt_body_examples import body_example_for
 
 _PATH_PARAM = re.compile(r"\{([^{}]+)\}")
 
+# Prefer minimal-seed UUIDs so console Try-it requests resolve against `make seed`.
 _PATH_PARAM_EXAMPLES: dict[str, object] = {
-    "vm": "vm-001",
-    "vmId": "00000000-0000-0000-0000-000000000001",
-    "host": "host-01",
-    "hostId": "00000000-0000-0000-0000-000000000011",
+    "vm": "lab-vm-01",
+    "vm_id": str(stable_id("vm", "lab-vm-01")),
+    "vmId": str(stable_id("vm", "lab-vm-01")),
+    "host": "host01",
+    "host_id": str(stable_id("host", "host01")),
+    "hostId": str(stable_id("host", "host01")),
     "cluster": "Default",
-    "clusterId": "00000000-0000-0000-0000-000000000021",
+    "cluster_id": str(stable_id("cluster", "Default")),
+    "clusterId": str(stable_id("cluster", "Default")),
+    "datacenter_id": str(stable_id("dc", "Default")),
     "dataCenter": "Default",
-    "dataCenterId": "00000000-0000-0000-0000-000000000031",
-    "disk": "disk-001",
-    "diskId": "00000000-0000-0000-0000-000000000041",
+    "dataCenterId": str(stable_id("dc", "Default")),
+    "disk": "lab-vm-01-disk",
+    "disk_id": str(stable_id("disk", "lab-vm-01")),
+    "diskId": str(stable_id("disk", "lab-vm-01")),
     "network": "ovirtmgmt",
-    "networkId": "00000000-0000-0000-0000-000000000051",
-    "storageDomain": "data",
-    "storageDomainId": "00000000-0000-0000-0000-000000000061",
+    "network_id": str(stable_id("net", "ovirtmgmt")),
+    "networkId": str(stable_id("net", "ovirtmgmt")),
+    "storagedomain_id": str(stable_id("sd", "data1")),
+    "storageDomain": "data1",
+    "storageDomainId": str(stable_id("sd", "data1")),
     "template": "Blank",
-    "templateId": "00000000-0000-0000-0000-000000000071",
+    "template_id": str(stable_id("template", "Blank")),
+    "templateId": str(stable_id("template", "Blank")),
     "user": "admin@internal",
-    "userId": "00000000-0000-0000-0000-000000000081",
+    "user_id": str(stable_id("user", "admin")),
+    "userId": str(stable_id("user", "admin")),
     "jobId": "00000000-0000-0000-0000-000000000091",
-    "id": "00000000-0000-0000-0000-000000000001",
+    "id": str(stable_id("vm", "lab-vm-01")),
 }
 
 
@@ -42,6 +54,65 @@ def path_param_example(name: str) -> object | None:
     """Return a realistic placeholder for a common Engine path parameter."""
 
     return _PATH_PARAM_EXAMPLES.get(name)
+
+
+def _body_fields_from_example(
+    body_example: dict[str, Any] | None, *, element: str
+) -> list[dict[str, Any]]:
+    """PARAM inputs derived from body_example, including nested scalar paths."""
+
+    if not isinstance(body_example, dict) or not body_example:
+        return []
+    inner: Any = body_example
+    if (
+        element
+        and element in body_example
+        and isinstance(body_example[element], dict)
+    ):
+        inner = body_example[element]
+    elif len(body_example) == 1:
+        only = next(iter(body_example.values()))
+        if isinstance(only, dict):
+            inner = only
+    if not isinstance(inner, dict):
+        return []
+
+    fields: list[dict[str, Any]] = []
+
+    def _leaf_type(value: Any) -> str:
+        if isinstance(value, bool):
+            return "boolean"
+        if isinstance(value, int) and not isinstance(value, bool):
+            return "integer"
+        if isinstance(value, float):
+            return "number"
+        return "string"
+
+    def _walk(prefix: str, value: Any) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                path = f"{prefix}.{key}" if prefix else str(key)
+                _walk(path, child)
+            return
+        if isinstance(value, list):
+            for index, child in enumerate(value):
+                path = f"{prefix}.{index}" if prefix else str(index)
+                _walk(path, child)
+            return
+        desc = f"{element}.{prefix}" if element else prefix
+        fields.append(
+            {
+                "name": prefix,
+                "type": _leaf_type(value),
+                "description": desc,
+                "optional": True,
+                "enum": [],
+                "example": value,
+            }
+        )
+
+    _walk("", inner)
+    return fields
 
 _SERIES_LABELS = {
     "3.0": "Engine 3.0",
@@ -146,18 +217,16 @@ def ovirt_method_payload(
                 }
                 for name in path_params
             ]
-            body_fields: list[dict[str, Any]] = []
-            if op.method in {"POST", "PUT"} and op.kind in {"collection", "item", "action"}:
-                body_fields.append(
-                    {
-                        "name": op.element,
-                        "type": "object",
-                        "description": f"{op.element} payload (XML or JSON)",
-                        "optional": op.kind == "action",
-                        "enum": [],
-                        "example": {op.element: {"name": "example"}},
-                    }
-                )
+            # Full Engine-shaped JSON lives in body_example (root-wrapped entity / action).
+            # PARAM drawer flattens nested scalars from that example (dotted paths).
+            body_example = body_example_for(
+                method=op.method,
+                kind=op.kind,
+                element=op.element,
+                path=op.path,
+            )
+            # Scalar fields for the PARAMS drawer; full nested JSON stays in body_example.
+            body_fields = _body_fields_from_example(body_example, element=op.element or "")
             query_fields = []
             if op.search:
                 query_fields.extend(
@@ -200,6 +269,7 @@ def ovirt_method_payload(
                 "path_fields": path_fields,
                 "query_fields": query_fields,
                 "body_fields": body_fields,
+                "body_example": body_example,
                 "runtime_version": runtime_version,
             }
     return {
@@ -214,6 +284,7 @@ def ovirt_method_payload(
         "path_fields": [],
         "query_fields": [],
         "body_fields": [],
+        "body_example": None,
         "runtime_version": runtime_version,
     }
 

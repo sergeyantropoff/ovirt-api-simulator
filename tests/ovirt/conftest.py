@@ -9,18 +9,41 @@ import requests
 
 
 def discover_base_url() -> str:
-    for candidate in (
-        os.environ.get("OVIRT_TEST_URL"),
-        "https://api-gateway",
-        "https://127.0.0.1",
-        "https://127.0.0.1:9443",
-    ):
-        if not candidate:
+    """Prefer OVIRT_TEST_URL / OVIRT_ENGINE_PORT; require Engine SSO path (not a foreign :443)."""
+
+    port = (os.environ.get("OVIRT_ENGINE_PORT") or "").strip()
+    candidates: list[str] = []
+    if os.environ.get("OVIRT_TEST_URL"):
+        candidates.append(os.environ["OVIRT_TEST_URL"].rstrip("/"))
+    candidates.append("https://api-gateway")
+    if port and port != "443":
+        candidates.append(f"https://127.0.0.1:{port}")
+    candidates.extend(
+        [
+            "https://127.0.0.1:7443",
+            "https://127.0.0.1:6443",
+            "https://127.0.0.1",
+            "https://127.0.0.1:9443",
+        ]
+    )
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate or candidate in seen:
             continue
+        seen.add(candidate)
         try:
-            r = requests.get(f"{candidate.rstrip('/')}/health/live", timeout=3, verify=False)
-            if r.status_code == 200:
-                return candidate.rstrip("/")
+            live = requests.get(f"{candidate}/health/live", timeout=3, verify=False)
+            if live.status_code != 200:
+                continue
+            # Distinguish this lab from other listeners on :443.
+            probe = requests.get(
+                f"{candidate}/ovirt-engine/api/",
+                headers={"Accept": "application/json"},
+                timeout=3,
+                verify=False,
+            )
+            if probe.status_code in {200, 401}:
+                return candidate
         except Exception:
             continue
     pytest.skip("no running oVirt simulator gateway")
