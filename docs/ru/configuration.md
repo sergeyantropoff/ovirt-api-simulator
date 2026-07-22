@@ -73,8 +73,11 @@ Docker Compose подставляет многие из них для серви
 | `secrets.ticketSigningKey` | Нужно ротировать на общих кластерах |
 | `service.port` | Порт ClusterIP (по умолчанию `8080`) |
 
-`gateway.*` / `ingress.*` в `values.yaml` зарезервированы; чарт сейчас отдаёт
-FastAPI напрямую (без nginx gateway как в Compose).
+`gateway.*` не используется (нет nginx gateway как в Compose).
+`ingress.*` опционален — см.
+[`values-ingress-example.yaml`](../../helm/ovirt-api-simulator/values-ingress-example.yaml)
+и [Устранение неполадок](troubleshooting.md) для annotations, сохраняющих
+тела fault Engine.
 
 ## Контрактные packs
 

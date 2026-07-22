@@ -123,11 +123,19 @@ async def handle_generic(
         )
         if method == "GET":
             if row is None:
-                raise OVirtError("NotFound", f"{element} not found", status_code=404)
-            return respond(request, element=element, data=generic_entity(collection, element, row))
+                from app.ovirt.common import no_such
+
+                raise no_such(element, oid)
+            return respond(
+                request,
+                element=element,
+                data=generic_entity(collection, element, row, entity_id=oid),
+            )
         if method == "PUT":
             if row is None:
-                raise OVirtError("NotFound", f"{element} not found", status_code=404)
+                from app.ovirt.common import no_such
+
+                raise no_such(element, oid)
             body = unwrap_entity(payload, element)
             data = dict(json.loads(row["data"]) if isinstance(row["data"], str) else row["data"] or {})
             data.update(body)
@@ -330,8 +338,10 @@ async def handle_subcollection(
                 parent_id,
             )
             if row is None:
-                raise OVirtError("NotFound", f"{element} not found", status_code=404)
-            data = generic_entity(sub, element, row)
+                from app.ovirt.common import no_such
+
+                raise no_such(element, oid)
+            data = generic_entity(sub, element, row, entity_id=oid)
             data["href"] = f"/ovirt-engine/api/{parent_collection}/{parent_id}/{sub}/{oid}"
             return respond(request, element=element, data=data)
         if method == "DELETE":

@@ -11,6 +11,7 @@ from uuid import uuid4
 from asyncpg import Connection
 from fastapi import APIRouter, Request, Response
 
+from app.ovirt.common import no_such, require_cluster, require_datacenter, require_host
 from app.ovirt.deps import get_db, require_auth
 from app.ovirt.errors import OVirtError
 from app.ovirt.jobs import create_job, respond_action
@@ -170,7 +171,7 @@ async def handle_engine_request(request: Request) -> Response:
         raise
     except (TypeError, AttributeError) as exc:
         # Missing rows often crash in *_entity builders (row is None).
-        raise OVirtError("NotFound", "resource not found", status_code=404) from exc
+        raise no_such("resource", rel or "/") from exc
     except Exception as exc:
         # Integrity / UUID parse failures from coverage mutations → client error.
         name = type(exc).__name__
@@ -1045,13 +1046,12 @@ async def _handle_hosts(
         row = await conn.fetchrow("SELECT * FROM ov_hosts WHERE id=$1", hid)
         return respond(request, element="host", data=host_entity(row), status_code=201)
     host_id = parts[1]
-    row = await conn.fetchrow("SELECT * FROM ov_hosts WHERE id=$1::uuid", host_id)
     if len(parts) == 2:
         if method == "GET":
-            if row is None:
-                raise OVirtError("NotFound", "host not found", status_code=404)
+            row = await require_host(conn, host_id)
             return respond(request, element="host", data=host_entity(row))
         if method == "PUT":
+            await require_host(conn, host_id)
             body = unwrap_entity(payload, "host")
             await conn.execute(
                 "UPDATE ov_hosts SET name=COALESCE($2,name), address=COALESCE($3,address), updated_at=now() WHERE id=$1::uuid",
@@ -1059,11 +1059,15 @@ async def _handle_hosts(
                 body.get("name"),
                 body.get("address"),
             )
-            row = await conn.fetchrow("SELECT * FROM ov_hosts WHERE id=$1::uuid", host_id)
+            row = await require_host(conn, host_id)
             return respond(request, element="host", data=host_entity(row))
         if method == "DELETE":
+            await require_host(conn, host_id)
             await conn.execute("DELETE FROM ov_hosts WHERE id=$1::uuid", host_id)
             return Response(status_code=200)
+    row = await conn.fetchrow("SELECT * FROM ov_hosts WHERE id=$1::uuid", host_id)
+    if row is None:
+        raise no_such("host", host_id)
     if len(parts) == 3 and method == "POST":
         action = parts[2].lower()
         status_map = await option_json(conn, OPT_HOST_ACTION_STATUS_MAP)
@@ -1129,11 +1133,10 @@ async def _handle_datacenters(
         return respond(request, element="data_center", data=datacenter_entity(row), status_code=201)
     dc_id = parts[1]
     if len(parts) == 2 and method == "GET":
-        row = await conn.fetchrow("SELECT * FROM ov_datacenters WHERE id=$1::uuid", dc_id)
-        if row is None:
-            raise OVirtError("NotFound", "datacenter not found", status_code=404)
+        row = await require_datacenter(conn, dc_id)
         return respond(request, element="data_center", data=datacenter_entity(row))
     if len(parts) == 2 and method == "PUT":
+        await require_datacenter(conn, dc_id)
         body = unwrap_entity(payload, "data_center")
         await conn.execute(
             "UPDATE ov_datacenters SET name=COALESCE($2,name), description=COALESCE($3,description), updated_at=now() WHERE id=$1::uuid",
@@ -1141,9 +1144,10 @@ async def _handle_datacenters(
             body.get("name"),
             body.get("description"),
         )
-        row = await conn.fetchrow("SELECT * FROM ov_datacenters WHERE id=$1::uuid", dc_id)
+        row = await require_datacenter(conn, dc_id)
         return respond(request, element="data_center", data=datacenter_entity(row))
     if len(parts) == 2 and method == "DELETE":
+        await require_datacenter(conn, dc_id)
         await conn.execute("DELETE FROM ov_datacenters WHERE id=$1::uuid", dc_id)
         return Response(status_code=200)
     if len(parts) == 3 and method == "POST" and parts[2] == "cleanfinishedtasks":
@@ -1225,9 +1229,7 @@ async def _dc_clusters(
     request: Request, conn: Connection, method: str, parts: list[str], payload: dict[str, Any]
 ) -> Response:
     dc_id = parts[1]
-    dc = await conn.fetchrow("SELECT id FROM ov_datacenters WHERE id=$1::uuid", dc_id)
-    if dc is None:
-        raise OVirtError("NotFound", "datacenter not found", status_code=404)
+    await require_datacenter(conn, dc_id)
     if len(parts) == 3 and method == "GET":
         rows = await conn.fetch(
             "SELECT * FROM ov_clusters WHERE datacenter_id=$1::uuid ORDER BY name", dc_id
@@ -1263,7 +1265,7 @@ async def _dc_clusters(
             dc_id,
         )
         if row is None:
-            raise OVirtError("NotFound", "cluster not found", status_code=404)
+            raise no_such("cluster", parts[3])
         return respond(request, element="cluster", data=cluster_entity(row))
     if len(parts) == 4 and method == "DELETE":
         await conn.execute(
@@ -1279,9 +1281,7 @@ async def _dc_networks(
     request: Request, conn: Connection, method: str, parts: list[str], payload: dict[str, Any]
 ) -> Response:
     dc_id = parts[1]
-    dc = await conn.fetchrow("SELECT id FROM ov_datacenters WHERE id=$1::uuid", dc_id)
-    if dc is None:
-        raise OVirtError("NotFound", "datacenter not found", status_code=404)
+    await require_datacenter(conn, dc_id)
     if len(parts) == 3 and method == "GET":
         rows = await conn.fetch(
             "SELECT * FROM ov_networks WHERE datacenter_id=$1::uuid ORDER BY name", dc_id
@@ -1427,11 +1427,10 @@ async def _handle_clusters(
         return respond(request, element="cluster", data=cluster_entity(row), status_code=201)
     cluster_id = parts[1]
     if len(parts) == 2 and method == "GET":
-        row = await conn.fetchrow("SELECT * FROM ov_clusters WHERE id=$1::uuid", cluster_id)
-        if row is None:
-            raise OVirtError("NotFound", "cluster not found", status_code=404)
+        row = await require_cluster(conn, cluster_id)
         return respond(request, element="cluster", data=cluster_entity(row))
     if len(parts) == 2 and method == "PUT":
+        await require_cluster(conn, cluster_id)
         body = unwrap_entity(payload, "cluster")
         await conn.execute(
             "UPDATE ov_clusters SET name=COALESCE($2,name), description=COALESCE($3,description) WHERE id=$1::uuid",
@@ -1439,9 +1438,10 @@ async def _handle_clusters(
             body.get("name"),
             body.get("description"),
         )
-        row = await conn.fetchrow("SELECT * FROM ov_clusters WHERE id=$1::uuid", cluster_id)
+        row = await require_cluster(conn, cluster_id)
         return respond(request, element="cluster", data=cluster_entity(row))
     if len(parts) == 2 and method == "DELETE":
+        await require_cluster(conn, cluster_id)
         await conn.execute("DELETE FROM ov_clusters WHERE id=$1::uuid", cluster_id)
         return Response(status_code=200)
     if len(parts) >= 3 and parts[2] == "affinitygroups":
@@ -1542,9 +1542,7 @@ async def _cluster_networks(
 
     del payload
     cluster_id = parts[1]
-    cluster = await conn.fetchrow("SELECT * FROM ov_clusters WHERE id=$1::uuid", cluster_id)
-    if cluster is None:
-        raise OVirtError("NotFound", "cluster not found", status_code=404)
+    cluster = await require_cluster(conn, cluster_id)
     dc_id = cluster["datacenter_id"]
     if len(parts) == 3 and method == "GET":
         rows = await conn.fetch(

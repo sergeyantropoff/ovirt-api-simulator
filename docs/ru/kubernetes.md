@@ -19,10 +19,12 @@
 | **seed** Job (опционально) | Лабораторные данные `minimal` или `demo` |
 
 > Compose публикует Engine HTTPS + UI через nginx `api-gateway`
-> ([ports.md](ports.md)). Helm-чарт **пока не** включает этот gateway:
-> ключи `gateway.*` / `ingress.*` в `values.yaml` зарезервированы и не
-> используются. Доступ — к Service симулятора на `:8080` (port-forward или
-> свой Ingress).
+> ([ports.md](ports.md)). Helm-чарт отдаёт Service симулятора на `:8080`.
+> Опциональный Ingress:
+> [`values-ingress-example.yaml`](../../helm/ovirt-api-simulator/values-ingress-example.yaml)
+> (`proxy-intercept-errors: "false"`, `custom-http-errors: "502,503"`, чтобы
+> fault Engine не подменялся брендированным HTML). См.
+> [Устранение неполадок](troubleshooting.md).
 
 ## Требования
 

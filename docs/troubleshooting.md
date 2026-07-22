@@ -36,6 +36,49 @@ make seed-demo
 Set `Version: 4` (or `3`) or use `/ovirt-engine/api/v4/...`. Confirm
 `OVIRT_SERIES` matches the pack you expect ([api-versions.md](api-versions.md)).
 
+## HTTP 401 / Web UI still shows signed-in user
+
+Engine SSO token expired or was revoked (e.g. after `demo/unload` / reseed).
+In the Web UI, HTTP **401** clears the local session and shows **Guest** in the
+header; sign in again from Environment (`admin@internal` / `secret`).
+
+## Ingress returns branded HTML 404 / nginx 405 instead of Engine fault
+
+The simulator answers API errors as Engine **fault** XML/JSON
+(`reason` / `detail`). If you see a site HTML “page not found” or plain nginx
+**405** page, the **Ingress / reverse proxy** replaced the upstream body (often
+via `custom-http-errors` on the ingress-nginx controller).
+
+Fix on the Ingress for this host (see
+`helm/ovirt-api-simulator/values-ingress-example.yaml`):
+
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/proxy-intercept-errors: "false"
+  nginx.ingress.kubernetes.io/custom-http-errors: "502,503"
+```
+
+Then re-check with `Accept: application/json`. A missing host should look like:
+
+```json
+{"fault": {"reason": "NotFound", "detail": "No such host ('…')"}}
+```
+
+### Correct authenticated mutation (Engine-style)
+
+Use Bearer (or Basic) auth and JSON body (not form-urlencoded):
+
+```bash
+# after POST /ovirt-engine/sso/oauth/token → access_token
+TOKEN=…
+curl -sk -X POST "https://HOST/ovirt-engine/api/vms" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Version: 4" \
+  -d '{"vm":{"name":"lab-vm","cluster":{"name":"Default"}}}'
+```
+
 ## Client suite failures
 
 Ensure the stack is up and seeded, then run smoke first:

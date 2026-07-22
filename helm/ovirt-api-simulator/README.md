@@ -15,8 +15,9 @@ helm upgrade --install ovirt-sim . \
   --set secrets.ticketSigningKey="$(openssl rand -hex 32)"
 ```
 
-Access via port-forward to Service `:8080` (Engine API, SSO, Web UI, `/docs`).
-The Compose nginx gateway is **not** part of this chart yet.
+Access via port-forward to Service `:8080` (Engine API, SSO, Web UI, `/docs`),
+or enable Ingress with
+[`values-ingress-example.yaml`](values-ingress-example.yaml).
 
 Full guide: [docs/kubernetes.md](../../docs/kubernetes.md).  
 Values: [`values.yaml`](values.yaml).

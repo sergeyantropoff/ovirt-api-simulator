@@ -244,11 +244,17 @@ def user_entity(row: Any) -> dict[str, Any]:
     }
 
 
-def generic_entity(collection: str, element: str, row: Any) -> dict[str, Any]:
+def generic_entity(
+    collection: str,
+    element: str,
+    row: Any,
+    *,
+    entity_id: str | None = None,
+) -> dict[str, Any]:
     if row is None:
-        from app.ovirt.errors import OVirtError
+        from app.ovirt.common import no_such
 
-        raise OVirtError("NotFound", f"{element} not found", status_code=404)
+        raise no_such(element, entity_id or "unknown")
     oid = str(row["id"])
     data = _data(row)
     entity = {

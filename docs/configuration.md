@@ -73,8 +73,11 @@ See [Kubernetes / Helm](kubernetes.md) and
 | `secrets.ticketSigningKey` | Must be rotated for shared clusters |
 | `service.port` | ClusterIP port (default `8080`) |
 
-`gateway.*` / `ingress.*` in `values.yaml` are reserved; the chart currently
-exposes FastAPI directly (no Compose-style nginx gateway).
+`gateway.*` is unused (no Compose-style nginx gateway in the chart).
+`ingress.*` is optional — see
+[`values-ingress-example.yaml`](../helm/ovirt-api-simulator/values-ingress-example.yaml)
+and [Troubleshooting](troubleshooting.md) for annotations that preserve Engine
+fault bodies.
 
 ## Contract packs
 

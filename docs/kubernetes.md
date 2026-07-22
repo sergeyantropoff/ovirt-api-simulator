@@ -19,9 +19,12 @@ Published image (when pushed):
 | **seed** Job (optional) | `minimal` or `demo` lab data |
 
 > The Compose stack publishes Engine HTTPS + UI via nginx `api-gateway`
-> ([ports.md](ports.md)). The Helm chart **does not yet** ship that gateway:
-> `gateway.*` / `ingress.*` keys in `values.yaml` are reserved and unused.
-> Access the simulator Service on `:8080` (port-forward or your own Ingress).
+> ([ports.md](ports.md)). The Helm chart serves the simulator Service on `:8080`.
+> Optional Ingress: enable with
+> [`values-ingress-example.yaml`](../helm/ovirt-api-simulator/values-ingress-example.yaml)
+> (`proxy-intercept-errors: "false"`, `custom-http-errors: "502,503"` so Engine
+> fault bodies are not rewritten to branded HTML). See
+> [Troubleshooting](troubleshooting.md).
 
 ## Prerequisites
 

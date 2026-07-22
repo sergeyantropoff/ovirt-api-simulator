@@ -4740,12 +4740,7 @@
         if (!res.ok) throw new Error("session expired");
         persistAuth();
       } catch {
-        state.ticket = null;
-        state.csrf = null;
-        state.username = null;
-        state.project = null;
-        localStorage.removeItem(LS_AUTH);
-        setAuth(false);
+        clearSession({ closePanel: false });
       }
     }
 
@@ -5994,6 +5989,23 @@
       }
     }
 
+    function clearSession(options = {}) {
+      const { toastMessage = null, toastKind = "info", closePanel = true } = options;
+      state.ticket = null;
+      state.csrf = null;
+      state.username = null;
+      state.project = null;
+      document.cookie = "JSESSIONID=; Max-Age=0; path=/; SameSite=Strict";
+      document.cookie = "ovirt_token=; Max-Age=0; path=/; SameSite=Strict";
+      try { localStorage.removeItem(LS_AUTH); } catch {}
+      try { sessionStorage.removeItem(LS_AUTH); } catch {}
+      setAuth(false);
+      persistAuth();
+      if (closePanel) closeAuthPanel();
+      resetClusterStats("—");
+      if (toastMessage) toast(toastMessage, toastKind);
+    }
+
     function logout() {
       const token = state.ticket;
       if (token) {
@@ -6002,15 +6014,15 @@
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
-      state.ticket = null;
-      state.csrf = null;
-      state.username = null;
-      state.project = null;
-      setAuth(false);
-      persistAuth();
-      closeAuthPanel();
-      resetClusterStats("—");
-      toast("Signed out", "info");
+      clearSession({ toastMessage: "Signed out", toastKind: "info" });
+    }
+
+    function expireSession() {
+      clearSession({
+        toastMessage: "Session expired — sign in again",
+        toastKind: "warn",
+        closePanel: false,
+      });
     }
 
     function updateStatusBadge(status) {
@@ -6087,6 +6099,9 @@
       const text = await res.text();
       let parsed;
       try { parsed = JSON.parse(text); } catch { parsed = text; }
+      if (res.status === 401 && (state.ticket || state.username)) {
+        expireSession();
+      }
       return { status: res.status, body: parsed, durationMs: Math.round(performance.now() - started) };
     }
 

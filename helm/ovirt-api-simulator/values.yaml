@@ -20,11 +20,16 @@ gateway:
 ingress:
   enabled: false
   className: nginx
+  # Prefer values-ingress-example.yaml for public Ingress. Keep API fault bodies:
+  #   nginx.ingress.kubernetes.io/proxy-intercept-errors: "false"
+  #   nginx.ingress.kubernetes.io/custom-http-errors: "502,503"  # not 404/405
+  annotations: {}
   hosts:
     - host: ovirt-engine.local
       paths:
         - path: /
           pathType: Prefix
+  tls: []
 
 config:
   ovirtSeries: "4.5"
